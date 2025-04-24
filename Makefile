@@ -17,3 +17,11 @@ rebuild:
 # List available targets in the current build configuration
 $(BUILD_DIR)/target_list.txt:
 	cmake --build $(BUILD_DIR) --target help > $(BUILD_DIR)/target_list.txt
+
+# register a new check in the misc module
+new-check-%:
+	git stash --include-untracked -m "Stash modification before commiting a new check"
+	-$(MAKE) -C clang-tools-extra/clang-tidy $@
+	-git add .
+	-git commit -m "Generated new check '$*'"
+	git stash pop
