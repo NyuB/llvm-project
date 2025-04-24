@@ -154,6 +154,14 @@ New checks
 - New :doc:`modernize-use-string-view
   <clang-tidy/checks/modernize/use-string-view>` check.
 
+- New :doc:`misc-equalities
+  <clang-tidy/checks/misc/equalities>` check.
+
+  FIXME: Write a short description.
+
+- New :doc:`readability-ambiguous-smartptr-reset-call
+  <clang-tidy/checks/readability/ambiguous-smartptr-reset-call>` check.
+
   Looks for functions returning ``std::[w|u8|u16|u32]string`` and suggests to
   change it to ``std::[...]string_view`` for performance reasons if possible.
 
