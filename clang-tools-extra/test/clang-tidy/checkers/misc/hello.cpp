@@ -1,14 +1,13 @@
 // RUN: %check_clang_tidy %s misc-hello %t
 
-// FIXME: Add something that triggers the check here.
+[[clang::annotate("Hello")]]
 void f();
-// CHECK-MESSAGES: :[[@LINE-1]]:6: warning: function 'f' is insufficiently awesome [misc-hello]
+// CHECK-MESSAGES: :[[@LINE-1]]:6: warning: function 'f' is annotated with Hello and should therefore be prefixed with 'hello_' [misc-hello]
 
-// FIXME: Verify the applied fix.
-//   * Make the CHECK patterns specific enough and try to make verified lines
+// * Make the CHECK patterns specific enough and try to make verified lines
 //     unique to avoid incorrect matches.
-//   * Use {{}} for regular expressions.
-// CHECK-FIXES: {{^}}void awesome_f();{{$}}
+// * Use {{}} for regular expressions.
+// CHECK-FIXES: {{^}}void hello_f();{{$}}
 
-// FIXME: Add something that doesn't trigger the check here.
-void awesome_f2();
+[[clang::annotate("Hello")]]
+void hello_f2();
