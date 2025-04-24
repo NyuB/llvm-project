@@ -268,6 +268,7 @@ Clang-Tidy Checks
    :doc:`misc-coroutine-hostile-raii <misc/coroutine-hostile-raii>`,
    :doc:`misc-definitions-in-headers <misc/definitions-in-headers>`, "Yes"
    :doc:`misc-header-include-cycle <misc/header-include-cycle>`,
+   :doc:`misc-hello <misc/hello>`, "Yes"
    :doc:`misc-include-cleaner <misc/include-cleaner>`, "Yes"
    :doc:`misc-misleading-bidirectional <misc/misleading-bidirectional>`,
    :doc:`misc-misleading-identifier <misc/misleading-identifier>`,
