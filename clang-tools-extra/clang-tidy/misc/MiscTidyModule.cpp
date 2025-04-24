@@ -14,7 +14,6 @@
 #include "CoroutineHostileRAIICheck.h"
 #include "DefinitionsInHeadersCheck.h"
 #include "HeaderIncludeCycleCheck.h"
-#include "HelloCheck.h"
 #include "IncludeCleanerCheck.h"
 #include "MisleadingBidirectionalCheck.h"
 #include "MisleadingIdentifierCheck.h"
@@ -56,8 +55,6 @@ public:
         "misc-definitions-in-headers");
     CheckFactories.registerCheck<HeaderIncludeCycleCheck>(
         "misc-header-include-cycle");
-    CheckFactories.registerCheck<HelloCheck>(
-        "misc-hello");
     CheckFactories.registerCheck<IncludeCleanerCheck>("misc-include-cleaner");
     CheckFactories.registerCheck<MisleadingBidirectionalCheck>(
         "misc-misleading-bidirectional");
