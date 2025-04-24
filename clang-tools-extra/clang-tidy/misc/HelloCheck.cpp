@@ -14,19 +14,32 @@ using namespace clang::ast_matchers;
 namespace clang::tidy::misc {
 
 void HelloCheck::registerMatchers(MatchFinder *Finder) {
-  // FIXME: Add matchers.
-  Finder->addMatcher(functionDecl().bind("x"), this);
+  // Find functions in current file that are annotated with clang::annotate
+  Finder->addMatcher(
+      functionDecl(isExpansionInMainFile(), hasAttr(attr::Kind::Annotate))
+          .bind("x"),
+      this);
 }
 
 void HelloCheck::check(const MatchFinder::MatchResult &Result) {
-  // FIXME: Add callback implementation.
   const auto *MatchedDecl = Result.Nodes.getNodeAs<FunctionDecl>("x");
-  if (!MatchedDecl->getIdentifier() || MatchedDecl->getName().starts_with("awesome_"))
+
+  // Only check functions annotated with [[clang::annotate("Hello")]]
+  bool IsHelloAnnotated = false;
+  for (const AnnotateAttr *attr : MatchedDecl->specific_attrs<AnnotateAttr>()) {
+    if (attr->getAnnotation() == "Hello") {
+      IsHelloAnnotated = true;
+      break;
+    }
+  }
+
+  if (!IsHelloAnnotated || MatchedDecl->getName().starts_with("hello_"))
     return;
-  diag(MatchedDecl->getLocation(), "function %0 is insufficiently awesome")
+  diag(MatchedDecl->getLocation(), "function %0 is annotated with Hello and "
+                                   "should therefore be prefixed with 'hello_'")
       << MatchedDecl
-      << FixItHint::CreateInsertion(MatchedDecl->getLocation(), "awesome_");
-  diag(MatchedDecl->getLocation(), "insert 'awesome'", DiagnosticIDs::Note);
+      << FixItHint::CreateInsertion(MatchedDecl->getLocation(), "hello_");
+  diag(MatchedDecl->getLocation(), "insert 'hello'", DiagnosticIDs::Note);
 }
 
 } // namespace clang::tidy::misc
