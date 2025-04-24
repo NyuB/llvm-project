@@ -130,6 +130,11 @@ New checks
   Finds unintended character output from ``unsigned char`` and ``signed char``
   to an ``ostream``.
 
+- New :doc:`misc-equalities
+  <clang-tidy/checks/misc/equalities>` check.
+
+  FIXME: Write a short description.
+
 - New :doc:`readability-ambiguous-smartptr-reset-call
   <clang-tidy/checks/readability/ambiguous-smartptr-reset-call>` check.
 
