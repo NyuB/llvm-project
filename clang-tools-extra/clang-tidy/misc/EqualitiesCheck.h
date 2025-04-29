@@ -26,6 +26,15 @@ public:
   bool isLanguageVersionSupported(const LangOptions &LangOpts) const override {
     return LangOpts.CPlusPlus;
   }
+
+private:
+  void signatureCheck(const clang::CXXMethodDecl *MatchedDecl);
+  bool isSignatureValid(const clang::CXXMethodDecl *MatchedDecl);
+  static std::string makeSignature(const clang::CXXMethodDecl *MatchedDecl);
+
+  void bodyCheck(const clang::CXXMethodDecl *MatchedDecl);
+  bool isBodyValid(const clang::CXXMethodDecl *MatchedDecl);
+  static std::string makeBody(const clang::CXXMethodDecl *MatchedDecl);
 };
 
 } // namespace clang::tidy::misc
