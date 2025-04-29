@@ -18,6 +18,9 @@ rebuild:
 $(BUILD_DIR)/target_list.txt:
 	cmake --build $(BUILD_DIR) --target help > $(BUILD_DIR)/target_list.txt
 
+test: rebuild
+	build/bin/clang-tidy.exe -checks=-*,misc-equalities clang-tools-extra/test/clang-tidy/checkers/misc/equalities.cpp --
+
 # register a new check in the misc module
 new-check-%:
 	git stash --include-untracked -m "Stash modification before commiting a new check"
