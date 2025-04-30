@@ -47,10 +47,7 @@ void EqualitiesCheck::signatureCheck(const clang::CXXMethodDecl *MatchedDecl) {
       signatureToReplace =
           SourceRange(MatchedDecl->getBeginLoc(), body.getLocWithOffset(-1));
     } else {
-      // Keep trailing ';'
-      signatureToReplace =
-          SourceRange(MatchedDecl->getBeginLoc(),
-                      MatchedDecl->getEndLoc().getLocWithOffset(-1));
+      signatureToReplace = MatchedDecl->getSourceRange();
     }
     diag(MatchedDecl->getLocation(),
          "function %0 signature is not suitable for an equality operator")
@@ -71,6 +68,16 @@ void EqualitiesCheck::bodyCheck(const clang::CXXMethodDecl *MatchedDecl) {
   }
 }
 
+QualType dereferencedParamType(QualType paramType) {
+  while (paramType->isPointerOrReferenceType()) {
+    if (paramType->isPointerType())
+      paramType = paramType->getAs<PointerType>()->getPointeeType();
+    else
+      paramType = paramType->getAs<ReferenceType>()->getPointeeType();
+  }
+  return paramType;
+}
+
 bool EqualitiesCheck::isSignatureValid(
     const clang::CXXMethodDecl *MatchedDecl) {
   bool result = true;
@@ -78,33 +85,36 @@ bool EqualitiesCheck::isSignatureValid(
     diag(MatchedDecl->getLocation(),
          "function %0 should have a single argument")
         << MatchedDecl;
-    return false;
+    result = false;
   } else {
     const ParmVarDecl *param = MatchedDecl->getParamDecl(0);
-    auto paramType = param->getType();
+    QualType paramType = param->getType();
+
     if (!paramType->isLValueReferenceType()) {
       diag(param->getLocation(), "parameter %0 should be passed by reference")
           << param;
-      return false;
+      result = false;
     }
-    QualType paramRecord = paramType->getAs<LValueReferenceType>()
-                               ->getPointeeType()
-                               .getCanonicalType();
+
+    QualType paramRecord = dereferencedParamType(paramType).getCanonicalType();
+
     if (!paramRecord.isConstQualified()) {
       diag(param->getLocation(), "parameter %0 should be const qualified")
           << param;
       result = false;
     }
+
     const auto *parentClass = MatchedDecl->getParent();
     const auto parentRecord =
         MatchedDecl->getASTContext()
             .getRecordType(parentClass->getTypeForDecl()->getAsCXXRecordDecl())
             .getCanonicalType();
+
     if (paramRecord.getUnqualifiedType() != parentRecord.getUnqualifiedType()) {
       diag(MatchedDecl->getLocation(),
-           "function %0 has invalid argument %1 for parent %2 (%3, %4)")
-          << MatchedDecl << param << parentClass << paramRecord.getAsString()
-          << parentRecord.getAsString();
+           "function %0 has invalid argument type %1 for equality with %2")
+          << MatchedDecl << paramRecord.getUnqualifiedType()
+          << parentRecord.getUnqualifiedType();
       result = false;
     }
   }
@@ -114,6 +124,13 @@ bool EqualitiesCheck::isSignatureValid(
         << MatchedDecl;
     result = false;
   }
+
+  if (!MatchedDecl->isConst()) {
+    diag(MatchedDecl->getLocation(), "function %0 should be const")
+        << MatchedDecl;
+    result = false;
+  }
+
   return result;
 }
 
@@ -134,13 +151,13 @@ bool EqualitiesCheck::isBodyValid(const clang::CXXMethodDecl *MatchedDecl) {
     return true;
   }
   if (body->children().empty()) {
-    diag(MatchedDecl->getLocation(),
+    diag(body->getBeginLoc(),
          "function %0 has empty body but should return a boolean value")
         << MatchedDecl;
     return false;
   }
   if (!isSingleReturnStmt(body)) {
-    diag(MatchedDecl->getLocation(),
+    diag(body->getBeginLoc(),
          "function %0 should consist of a single return statement")
         << MatchedDecl;
     return false;

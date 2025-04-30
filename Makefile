@@ -18,8 +18,20 @@ rebuild:
 $(BUILD_DIR)/target_list.txt:
 	cmake --build $(BUILD_DIR) --target help > $(BUILD_DIR)/target_list.txt
 
+# Force eager template parsing to check templates too
+CLANG_TIDY_EXTRA_ARGS=--extra-arg=-fno-delayed-template-parsing
+
+demo: rebuild
+	build/bin/clang-tidy.exe $(CLANG_TIDY_EXTRA_ARGS) -checks=-*,misc-equalities clang-tools-extra/test/clang-tidy/checkers/misc/equalities.cpp --
+demo-fix: rebuild
+	build/bin/clang-tidy.exe $(CLANG_TIDY_EXTRA_ARGS) --fix -checks=-*,misc-equalities clang-tools-extra/test/clang-tidy/checkers/misc/equalities.cpp --
+ast:
+	clang -Xclang -ast-dump clang-tools-extra/test/clang-tidy/checkers/misc/equalities.cpp
+query:
+	build/bin/clang-query.exe clang-tools-extra/test/clang-tidy/checkers/misc/equalities.cpp --
+
 test: rebuild
-	build/bin/clang-tidy.exe -checks=-*,misc-equalities clang-tools-extra/test/clang-tidy/checkers/misc/equalities.cpp --
+	LIT_FILTER="checkers/misc/equalities" ninja -C $(BUILD_DIR) check-clang-tools
 
 # register a new check in the misc module
 new-check-%:
