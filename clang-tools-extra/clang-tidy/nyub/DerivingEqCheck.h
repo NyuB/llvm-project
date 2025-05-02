@@ -1,4 +1,4 @@
-//===--- EqualitiesCheck.h - clang-tidy -------------------------*- C++ -*-===//
+//===--- DerivingEqCheck.h - clang-tidy -------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_NYUB_EQUALITIESCHECK_H
-#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_NYUB_EQUALITIESCHECK_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_NYUB_DERIVINGEQCHECK_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_NYUB_DERIVINGEQCHECK_H
 
 #include "../ClangTidyCheck.h"
 
@@ -17,9 +17,9 @@ namespace clang::tidy::nyub {
 ///
 /// For the user-facing documentation see:
 /// http://clang.llvm.org/extra/clang-tidy/checks/misc/equalities.html
-class EqualitiesCheck : public ClangTidyCheck {
+class DerivingEqCheck : public ClangTidyCheck {
 public:
-  EqualitiesCheck(StringRef Name, ClangTidyContext *Context)
+  DerivingEqCheck(StringRef Name, ClangTidyContext *Context)
       : ClangTidyCheck(Name, Context) {}
   void registerMatchers(ast_matchers::MatchFinder *Finder) override;
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
@@ -43,4 +43,4 @@ private:
 
 } // namespace clang::tidy::nyub
 
-#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_NYUB_EQUALITIESCHECK_H
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_NYUB_DERIVINGEQCHECK_H

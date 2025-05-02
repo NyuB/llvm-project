@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s nyub-equalities %t
+// RUN: %check_clang_tidy %s nyub-deriving-eq %t
 
 struct S {
     int i;
@@ -19,7 +19,7 @@ struct S {
     [[clang::annotate("deriving_eq")]]
     bool f_void(const S& s) const {}
     // CHECK-MESSAGES: :[[@LINE-1]]:35: warning: function 'f_void' has empty body but should return a boolean value
-    // CHECK-MESSAGES: :[[@LINE-2]]:35: warning: function 'f_void' should consist of a single return statement composed of binary equality comparisons [nyub-equalities]
+    // CHECK-MESSAGES: :[[@LINE-2]]:35: warning: function 'f_void' should consist of a single return statement composed of binary equality comparisons [nyub-deriving-eq]
     // CHECK-FIXES: bool f_void(const S& s) const  { return (i == s.i) && (j == s.j); }
 
     [[clang::annotate("deriving_eq")]]
@@ -28,8 +28,8 @@ struct S {
         bool eq_j = j == s.j;
         return eq_i && eq_j;
     }
-    // CHECK-MESSAGES: :[[@LINE-5]]:50: warning: function 'f_too_many_statements' should consist of a single return statement [nyub-equalities]
-    // CHECK-MESSAGES: :[[@LINE-6]]:50: warning: function 'f_too_many_statements' should consist of a single return statement composed of binary equality comparisons [nyub-equalities]
+    // CHECK-MESSAGES: :[[@LINE-5]]:50: warning: function 'f_too_many_statements' should consist of a single return statement [nyub-deriving-eq]
+    // CHECK-MESSAGES: :[[@LINE-6]]:50: warning: function 'f_too_many_statements' should consist of a single return statement composed of binary equality comparisons [nyub-deriving-eq]
     // CHECK-FIXES: bool f_too_many_statements(const S& s) const  { return (i == s.i) && (j == s.j); }
 
         
@@ -37,7 +37,7 @@ struct S {
     bool f_wrong_expression(const S& s) const {
         return i == s.i && i == s.i; // i compared twice, j missing
     }
-    // CHECK-MESSAGES: :[[@LINE-3]]:47: warning: function 'f_wrong_expression' should consist of a single return statement composed of binary equality comparisons [nyub-equalities]
+    // CHECK-MESSAGES: :[[@LINE-3]]:47: warning: function 'f_wrong_expression' should consist of a single return statement composed of binary equality comparisons [nyub-deriving-eq]
     // CHECK-FIXES: bool f_wrong_expression(const S& s) const { return (i == s.i) && (j == s.j); }
 
     // Signature-related tests
@@ -50,26 +50,26 @@ struct S {
     
     [[clang::annotate("deriving_eq")]]
     bool f_non_const_param(S& s) const;
-    // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: function 'f_non_const_param' signature is not suitable for an equality operator [nyub-equalities]
-    // CHECK-MESSAGES: :[[@LINE-2]]:31: warning: parameter 's' should be const qualified [nyub-equalities]
+    // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: function 'f_non_const_param' signature is not suitable for an equality operator [nyub-deriving-eq]
+    // CHECK-MESSAGES: :[[@LINE-2]]:31: warning: parameter 's' should be const qualified [nyub-deriving-eq]
     // CHECK-FIXES: bool f_non_const_param(S const& s) const;
     
     [[clang::annotate("deriving_eq")]]
     bool f_non_const(const S& s);
-    // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: function 'f_non_const' should be const [nyub-equalities]
-    // CHECK-MESSAGES: :[[@LINE-2]]:10: warning: function 'f_non_const' signature is not suitable for an equality operator [nyub-equalities]
+    // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: function 'f_non_const' should be const [nyub-deriving-eq]
+    // CHECK-MESSAGES: :[[@LINE-2]]:10: warning: function 'f_non_const' signature is not suitable for an equality operator [nyub-deriving-eq]
     // CHECK-FIXES: bool f_non_const(S const& s) const;
     
     [[clang::annotate("deriving_eq")]]
     bool f_non_ref(const S s) const;
-    // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: function 'f_non_ref' signature is not suitable for an equality operator [nyub-equalities]
-    // CHECK-MESSAGES: :[[@LINE-2]]:28: warning: parameter 's' should be passed by reference [nyub-equalities]
+    // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: function 'f_non_ref' signature is not suitable for an equality operator [nyub-deriving-eq]
+    // CHECK-MESSAGES: :[[@LINE-2]]:28: warning: parameter 's' should be passed by reference [nyub-deriving-eq]
     // CHECK-FIXES: bool f_non_ref(S const& s) const;
 
     [[clang::annotate("deriving_eq")]]
     bool f_wrong_param_type(const int& s) const;
-    // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: function 'f_wrong_param_type' has invalid argument type 'int' for equality with 'S' [nyub-equalities]
-    // CHECK-MESSAGES: :[[@LINE-2]]:10: warning: function 'f_wrong_param_type' signature is not suitable for an equality operator [nyub-equalities]
+    // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: function 'f_wrong_param_type' has invalid argument type 'int' for equality with 'S' [nyub-deriving-eq]
+    // CHECK-MESSAGES: :[[@LINE-2]]:10: warning: function 'f_wrong_param_type' signature is not suitable for an equality operator [nyub-deriving-eq]
     // CHECK-FIXES: bool f_wrong_param_type(S const& s) const;
 };
 
@@ -86,6 +86,6 @@ struct Empty {
 bool S::f_defined_later(const S& s) const {
     return true;
 }
-// CHECK-MESSAGES: :[[@LINE-3]]:43: warning: function 'f_defined_later' should consist of a single return statement composed of binary equality comparisons [nyub-equalities]
-// CHECK-MESSAGES: :[[@LINE-3]]:12: warning: function 'f_defined_later' returned expression should be a boolean conjonction of equalities [nyub-equalities]
+// CHECK-MESSAGES: :[[@LINE-3]]:43: warning: function 'f_defined_later' should consist of a single return statement composed of binary equality comparisons [nyub-deriving-eq]
+// CHECK-MESSAGES: :[[@LINE-3]]:12: warning: function 'f_defined_later' returned expression should be a boolean conjonction of equalities [nyub-deriving-eq]
 // CHECK-FIXES: bool S::f_defined_later(const S& s) const  { return (i == s.i) && (j == s.j); }

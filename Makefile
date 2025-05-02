@@ -20,8 +20,8 @@ $(BUILD_DIR)/target_list.txt:
 
 # Force eager template parsing to check templates too
 CLANG_TIDY_EXTRA_ARGS=--extra-arg=-fno-delayed-template-parsing
-ONLY_MY_CHECKS=-checks=-*,nyub-equalities
-DEMO_FILE=clang-tools-extra/test/clang-tidy/checkers/nyub/equalities.cpp
+ONLY_MY_CHECKS=-checks=-*,nyub-deriving-eq
+DEMO_FILE=clang-tools-extra/test/clang-tidy/checkers/nyub/deriving_eq.cpp
 CLANG_TIDY=$(BUILD_DIR)/bin/clang-tidy.exe
 CLANG_QUERY=$(BUILD_DIR)/bin/clang-query.exe
 
@@ -34,7 +34,7 @@ ast:
 query:
 	$(CLANG_QUERY) $(DEMO_FILE) --
 
-test: export LIT_FILTER=checkers/nyub/equalities
+test: export LIT_FILTER=checkers/nyub/deriving_eq
 test: rebuild
 	ninja -C $(BUILD_DIR) check-clang-tools
 
