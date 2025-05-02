@@ -11,7 +11,9 @@
 #include <algorithm>
 #include <iostream>
 
-using namespace clang::ast_matchers;
+using clang::ast_matchers::cxxMethodDecl;
+using clang::ast_matchers::hasAttr;
+using clang::ast_matchers::MatchFinder;
 
 namespace clang::tidy::misc {
 
@@ -88,7 +90,7 @@ bool EqualitiesCheck::isSignatureValid(
     result = false;
   } else {
     const ParmVarDecl *param = MatchedDecl->getParamDecl(0);
-    QualType paramType = param->getType();
+    const QualType paramType = param->getType();
 
     if (!paramType->isLValueReferenceType()) {
       diag(param->getLocation(), "parameter %0 should be passed by reference")
@@ -96,7 +98,8 @@ bool EqualitiesCheck::isSignatureValid(
       result = false;
     }
 
-    QualType paramRecord = dereferencedParamType(paramType).getCanonicalType();
+    const QualType paramRecord =
+        dereferencedParamType(paramType).getCanonicalType();
 
     if (!paramRecord.isConstQualified()) {
       diag(param->getLocation(), "parameter %0 should be const qualified")
@@ -145,7 +148,7 @@ bool isSingleReturnStmt(const Stmt *body) {
 }
 
 bool EqualitiesCheck::isBodyValid(const clang::CXXMethodDecl *MatchedDecl) {
-  const auto body = MatchedDecl->getBody();
+  auto *const body = MatchedDecl->getBody();
   if (!body) {
     // Just a declaration
     return true;
@@ -164,7 +167,7 @@ bool EqualitiesCheck::isBodyValid(const clang::CXXMethodDecl *MatchedDecl) {
   }
   const ReturnStmt *returnStmt =
       static_cast<ReturnStmt *>(*MatchedDecl->getBody()->children().begin());
-  for (auto child : returnStmt->children()) {
+  for (const auto *child : returnStmt->children()) {
     if (child->getStmtClass() != Stmt::BinaryOperatorClass) {
       diag(child->getBeginLoc(), "function %0 returned expression should be a "
                                  "boolean conjonction of equalities")
