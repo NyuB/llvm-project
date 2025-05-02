@@ -147,18 +147,6 @@ bool isSingleReturnStmt(const Stmt *body) {
   return true;
 }
 
-bool traverseEqExpr(const clang::CXXMethodDecl *MatchedDecl, ReturnStmt *expr) {
-  const auto parent = MatchedDecl->getParent();
-  const auto returnedExpr = *expr->child_begin();
-  if (parent->field_empty()) {
-    if (returnedExpr->getStmtClass() != Stmt::CXXBoolLiteralExprClass) {
-    }
-  }
-  auto binary = static_cast<BinaryOperator *>(*expr->child_begin());
-  for (const auto *field : MatchedDecl->getParent()->fields()) {
-  }
-}
-
 bool EqualitiesCheck::isBodyValid(const clang::CXXMethodDecl *MatchedDecl) {
   auto *const body = MatchedDecl->getBody();
   if (!body) {
@@ -227,17 +215,115 @@ bool EqualitiesCheck::isReturnTrue(const ReturnStmt *expr) {
   }
 }
 
+std::vector<const FieldDecl *>
+parentFields(const clang::CXXMethodDecl *MatchedDecl) {
+  std::vector<const FieldDecl *> fields;
+  for (const auto *f : MatchedDecl->getParent()->fields())
+    fields.push_back(f);
+  return fields;
+}
+
+const Stmt *unwrap(const Stmt *stmt) {
+  while (stmt->getStmtClass() == Stmt::ParenExprClass) {
+    stmt = *stmt->child_begin();
+  }
+  return stmt;
+}
+
+/**
+ * @brief safe match + cast for a given ast node
+ * @note @p stmt is unwrap ped first if nested in parenthesis expressions
+ * @return @p stmt casted as @p AstClass or nullptr if @p stmt is not a node of
+ * class @p AstClassTag
+ */
+template <Stmt::StmtClass AstClassTag, typename AstClass>
+const AstClass *getAs(const Stmt *stmt) {
+  stmt = unwrap(stmt);
+  if (stmt->getStmtClass() != AstClassTag)
+    return nullptr;
+  return static_cast<const AstClass *>(stmt);
+}
+
+bool isFieldEquality(const FieldDecl *field, const BinaryOperator *binary) {
+  if (binary->getOpcode() != BinaryOperator::Opcode::BO_EQ)
+    return false;
+
+  const auto lhs =
+      getAs<Stmt::ImplicitCastExprClass, ImplicitCastExpr>(binary->getLHS());
+  if (!lhs)
+    return false;
+  const auto leftMember =
+      getAs<Stmt::MemberExprClass, MemberExpr>(*lhs->child_begin());
+  if (!leftMember ||
+      leftMember->child_begin()->getStmtClass() != Stmt::CXXThisExprClass ||
+      leftMember->getMemberDecl()->getNameAsString() !=
+          field->getNameAsString()) {
+
+    return false;
+  }
+
+  const auto rhs =
+      getAs<Stmt::ImplicitCastExprClass, ImplicitCastExpr>(binary->getRHS());
+  if (!rhs)
+    return false;
+  const auto rightMember =
+      getAs<Stmt::MemberExprClass, MemberExpr>(*rhs->child_begin());
+  if (!rightMember ||
+      rightMember->child_begin()->getStmtClass() != Stmt::DeclRefExprClass ||
+      rightMember->getMemberDecl()->getNameAsString() !=
+          field->getNameAsString()) {
+    return false;
+  }
+
+  return true;
+}
+
+const BinaryOperator *getAsBinaryOperator(const Stmt *expr) {
+  return getAs<Stmt::BinaryOperatorClass, BinaryOperator>(expr);
+}
+int main(int argc, const char *argv[]) {
+  /* code */
+  return 0;
+}
+
 bool EqualitiesCheck::isReturnEqualityConjonction(
     const clang::CXXMethodDecl *MatchedDecl, const ReturnStmt *expr) {
   if (expr->child_begin() == expr->child_end())
     return false;
-  const auto child = *expr->child_begin();
-  if (child->getStmtClass() != Stmt::BinaryOperatorClass) {
-    diag(child->getBeginLoc(), "function %0 returned expression should be a "
-                               "boolean conjonction of equalities")
+  auto binary = getAsBinaryOperator(*expr->child_begin());
+  if (!binary) {
+    diag((*expr->child_begin())->getBeginLoc(),
+         "function %0 returned expression should be a "
+         "boolean conjonction of equalities")
         << MatchedDecl;
     return false;
   }
+
+  std::vector<const FieldDecl *> fields = parentFields(MatchedDecl);
+  while (!fields.empty()) {
+    const auto field = fields.back();
+    fields.pop_back();
+    if (fields.empty()) {
+      return isFieldEquality(field, binary);
+    }
+    if (binary->getOpcode() != BinaryOperator::Opcode::BO_LAnd) {
+      return false;
+    }
+
+    const auto eq = getAsBinaryOperator(binary->getRHS());
+    if (!eq) {
+      return false;
+    }
+    if (!isFieldEquality(field, eq)) {
+      return false;
+    }
+
+    binary = getAsBinaryOperator(binary->getLHS());
+    if (!binary) {
+      return false;
+    }
+  }
+
   return true;
 }
 
