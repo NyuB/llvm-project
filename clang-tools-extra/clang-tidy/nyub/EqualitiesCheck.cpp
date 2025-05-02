@@ -15,7 +15,7 @@ using clang::ast_matchers::cxxMethodDecl;
 using clang::ast_matchers::hasAttr;
 using clang::ast_matchers::MatchFinder;
 
-namespace clang::tidy::misc {
+namespace clang::tidy::nyub {
 
 bool isAnnotatedForEquality(const clang::CXXMethodDecl *MatchedDecl) {
 
@@ -281,10 +281,6 @@ bool isFieldEquality(const FieldDecl *field, const BinaryOperator *binary) {
 const BinaryOperator *getAsBinaryOperator(const Stmt *expr) {
   return getAs<Stmt::BinaryOperatorClass, BinaryOperator>(expr);
 }
-int main(int argc, const char *argv[]) {
-  /* code */
-  return 0;
-}
 
 bool EqualitiesCheck::isReturnEqualityConjonction(
     const clang::CXXMethodDecl *MatchedDecl, const ReturnStmt *expr) {
@@ -346,4 +342,4 @@ std::string EqualitiesCheck::makeSignature(const CXXMethodDecl *MatchedDecl) {
          " const& " + paramName + ") const";
 }
 
-} // namespace clang::tidy::misc
+} // namespace clang::tidy::nyub

@@ -107,6 +107,10 @@ static int LLVM_ATTRIBUTE_UNUSED MPIModuleAnchorDestination =
     MPIModuleAnchorSource;
 #endif
 
+// This anchor is used to force the linker to link the NyubModule.
+extern volatile int NyubModuleAnchorSource;
+static int NyubModuleAnchorDestination = NyubModuleAnchorSource;
+
 // This anchor is used to force the linker to link the ObjCModule.
 extern volatile int ObjCModuleAnchorSource;
 static int LLVM_ATTRIBUTE_UNUSED ObjCModuleAnchorDestination =
