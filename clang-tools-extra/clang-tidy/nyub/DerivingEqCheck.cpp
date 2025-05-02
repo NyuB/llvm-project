@@ -25,7 +25,7 @@ void DerivingEqCheck::registerMatchers(MatchFinder *Finder) {
 
 void DerivingEqCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *MatchedDecl = Result.Nodes.getNodeAs<CXXMethodDecl>("function");
-  if (!isAnnotatedFor(MatchedDecl, "deriving_eq"))
+  if (!isAnnotatedWith(MatchedDecl, "deriving_eq"))
     return;
   signatureCheck(MatchedDecl);
   bodyCheck(MatchedDecl);
@@ -155,8 +155,8 @@ bool DerivingEqCheck::isBodyValid(const clang::CXXMethodDecl *MatchedDecl) {
 }
 
 std::string DerivingEqCheck::makeBody(const CXXMethodDecl *MatchedDecl) {
-  const auto *parent = MatchedDecl->getParent();
-  if (parent->field_empty())
+  const auto fields = parentFields(MatchedDecl);
+  if (fields.empty())
     return "{ return true; }";
   std::string paramName;
   if (MatchedDecl->param_size() != 0) {
@@ -166,7 +166,7 @@ std::string DerivingEqCheck::makeBody(const CXXMethodDecl *MatchedDecl) {
   }
   std::string result = " { return ";
   bool noFieldAddedYet = true;
-  for (const auto *field : parent->fields()) {
+  for (const auto *field : fields) {
     const auto name = field->getNameAsString();
     if (!noFieldAddedYet) {
       result += " && ";
@@ -191,14 +191,6 @@ bool DerivingEqCheck::isReturnTrue(const ReturnStmt *expr) {
     return false;
   const auto returnedBool = static_cast<const CXXBoolLiteralExpr *>(returned);
   return returnedBool->getValue() == true;
-}
-
-std::vector<const FieldDecl *>
-parentFields(const clang::CXXMethodDecl *MatchedDecl) {
-  std::vector<const FieldDecl *> fields;
-  for (const auto *f : MatchedDecl->getParent()->fields())
-    fields.push_back(f);
-  return fields;
 }
 
 bool isFieldEquality(const FieldDecl *field, const BinaryOperator *binary) {
@@ -297,6 +289,17 @@ std::string DerivingEqCheck::makeSignature(const CXXMethodDecl *MatchedDecl) {
   }
   return "bool " + MatchedDecl->getNameAsString() + "(" + parentType +
          " const& " + paramName + ") const";
+}
+
+std::vector<const FieldDecl *>
+parentFields(const clang::CXXMethodDecl *MatchedDecl) {
+  std::vector<const FieldDecl *> fields;
+  for (const auto *f : MatchedDecl->getParent()->fields()) {
+    if (isAnnotatedWith(f, "deriving_eq::ignore"))
+      continue;
+    fields.push_back(f);
+  }
+  return fields;
 }
 
 } // namespace clang::tidy::nyub

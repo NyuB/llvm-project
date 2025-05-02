@@ -82,6 +82,17 @@ struct Empty {
     // CHECK-FIXES: bool f_trivial(Empty const& e) const { return true; }
 };
 
+struct Ignored {
+    int n;
+    [[clang::annotate("deriving_eq::ignore")]]
+    int ignored;
+    
+    [[clang::annotate("deriving_eq")]]
+    bool f_ok(Ignored const& i) const {
+        return n == i.n;
+    }
+};
+
 
 bool S::f_defined_later(const S& s) const {
     return true;
