@@ -151,8 +151,7 @@ bool EqualitiesCheck::isBodyValid(const clang::CXXMethodDecl *MatchedDecl) {
 
   if (MatchedDecl->getParent()->field_empty())
     return isReturnTrue(returnStmt);
-  else
-    return isReturnEqualityConjonction(MatchedDecl, returnStmt);
+  return isReturnEqualityConjonction(MatchedDecl, returnStmt);
 }
 
 std::string EqualitiesCheck::makeBody(const CXXMethodDecl *MatchedDecl) {
@@ -187,13 +186,11 @@ std::string EqualitiesCheck::makeBody(const CXXMethodDecl *MatchedDecl) {
 }
 
 bool EqualitiesCheck::isReturnTrue(const ReturnStmt *expr) {
-  const auto returned = *expr->child_begin();
+  const auto *const returned = *expr->child_begin();
   if (returned->getStmtClass() != Stmt::CXXBoolLiteralExprClass)
     return false;
-  else {
-    const auto returnedBool = static_cast<const CXXBoolLiteralExpr *>(returned);
-    return returnedBool->getValue() == true;
-  }
+  const auto returnedBool = static_cast<const CXXBoolLiteralExpr *>(returned);
+  return returnedBool->getValue() == true;
 }
 
 std::vector<const FieldDecl *>
@@ -208,11 +205,11 @@ bool isFieldEquality(const FieldDecl *field, const BinaryOperator *binary) {
   if (binary->getOpcode() != BinaryOperator::Opcode::BO_EQ)
     return false;
 
-  const auto lhs =
+  const auto *const lhs =
       getAs<Stmt::ImplicitCastExprClass, ImplicitCastExpr>(binary->getLHS());
   if (!lhs)
     return false;
-  const auto leftMember =
+  const auto *const leftMember =
       getAs<Stmt::MemberExprClass, MemberExpr>(*lhs->child_begin());
   if (!leftMember ||
       leftMember->child_begin()->getStmtClass() != Stmt::CXXThisExprClass ||
@@ -222,11 +219,11 @@ bool isFieldEquality(const FieldDecl *field, const BinaryOperator *binary) {
     return false;
   }
 
-  const auto rhs =
+  const auto *const rhs =
       getAs<Stmt::ImplicitCastExprClass, ImplicitCastExpr>(binary->getRHS());
   if (!rhs)
     return false;
-  const auto rightMember =
+  const auto *const rightMember =
       getAs<Stmt::MemberExprClass, MemberExpr>(*rhs->child_begin());
   if (!rightMember ||
       rightMember->child_begin()->getStmtClass() != Stmt::DeclRefExprClass ||
@@ -246,7 +243,7 @@ bool EqualitiesCheck::isReturnEqualityConjonction(
     const clang::CXXMethodDecl *MatchedDecl, const ReturnStmt *expr) {
   if (expr->child_begin() == expr->child_end())
     return false;
-  auto binary = getAsBinaryOperator(*expr->child_begin());
+  const auto *binary = getAsBinaryOperator(*expr->child_begin());
   if (!binary) {
     diag((*expr->child_begin())->getBeginLoc(),
          "function %0 returned expression should be a "
@@ -257,7 +254,7 @@ bool EqualitiesCheck::isReturnEqualityConjonction(
 
   std::vector<const FieldDecl *> fields = parentFields(MatchedDecl);
   while (!fields.empty()) {
-    const auto field = fields.back();
+    const auto *const field = fields.back();
     fields.pop_back();
     if (fields.empty()) {
       return isFieldEquality(field, binary);
@@ -266,7 +263,7 @@ bool EqualitiesCheck::isReturnEqualityConjonction(
       return false;
     }
 
-    const auto eq = getAsBinaryOperator(binary->getRHS());
+    const auto *const eq = getAsBinaryOperator(binary->getRHS());
     if (!eq) {
       return false;
     }
