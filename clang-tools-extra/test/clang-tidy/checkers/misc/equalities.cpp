@@ -4,6 +4,15 @@ struct S {
     int i;
     int j;
 
+    [[clang::annotate("deriving_eq")]]
+    bool f_ok(const S&s) const {
+        return i == s.i && j == s.j;
+    }
+
+    [[clang::annotate("deriving_eq")]]
+    bool f_ok_paren(const S&s) const {
+        return (i == (s.i)) && (j) == s.j;
+    }
 
     // Body-related tests
 
@@ -23,15 +32,21 @@ struct S {
     // CHECK-MESSAGES: :[[@LINE-6]]:50: warning: function 'f_too_many_statements' should consist of a single return statement composed of binary equality comparisons [misc-equalities]
     // CHECK-FIXES: bool f_too_many_statements(const S& s) const  { return (i == s.i) && (j == s.j); }
 
+        
     [[clang::annotate("deriving_eq")]]
-    bool f_ok(const S&s) const {
-        return i == s.i && j == s.j;
+    bool f_wrong_expression(const S& s) const {
+        return i == s.i && i == s.i; // i compared twice, j missing
     }
-    
+    // CHECK-MESSAGES: :[[@LINE-3]]:47: warning: function 'f_wrong_expression' should consist of a single return statement composed of binary equality comparisons [misc-equalities]
+    // CHECK-FIXES: bool f_wrong_expression(const S& s) const { return (i == s.i) && (j == s.j); }
+
     // Signature-related tests
 
     [[clang::annotate("deriving_eq")]]
     bool f_undefined_ok(const S& s) const;
+
+    [[clang::annotate("deriving_eq")]]
+    bool f_defined_later(const S& s) const;
     
     [[clang::annotate("deriving_eq")]]
     bool f_non_const_param(S& s) const;
@@ -56,9 +71,6 @@ struct S {
     // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: function 'f_wrong_param_type' has invalid argument type 'int' for equality with 'S' [misc-equalities]
     // CHECK-MESSAGES: :[[@LINE-2]]:10: warning: function 'f_wrong_param_type' signature is not suitable for an equality operator [misc-equalities]
     // CHECK-FIXES: bool f_wrong_param_type(S const& s) const;
-
-    [[clang::annotate("deriving_eq")]]
-    bool f_defined_later(const S& s) const;
 };
 
 struct Empty {
