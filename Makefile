@@ -33,6 +33,19 @@ query:
 test: rebuild
 	LIT_FILTER="checkers/misc/equalities" ninja -C $(BUILD_DIR) check-clang-tools
 
+CHECKS = -*
+CHECKS := $(CHECKS),bugprone-*
+CHECKS := $(CHECKS),cppcoreguidelines-*
+CHECKS := $(CHECKS),-cppcoreguidelines-pro-type-static-cast-downcast
+CHECKS := $(CHECKS),google-*
+CHECKS := $(CHECKS),-google-readability-braces-around-statements
+CHECKS := $(CHECKS),llvm-*
+CHECKS := $(CHECKS),misc-const-correctness
+tidy: rebuild
+	build/bin/clang-tidy.exe -p $(BUILD_DIR) $(CLANG_TIDY_EXTRA_ARGS) -checks=$(CHECKS) clang-tools-extra/clang-tidy/misc/EqualitiesCheck.cpp clang-tools-extra/clang-tidy/misc/EqualitiesCheck.h
+tidy-fix: rebuild
+	build/bin/clang-tidy.exe -fix -p $(BUILD_DIR) $(CLANG_TIDY_EXTRA_ARGS) -checks=$(CHECKS) clang-tools-extra/clang-tidy/misc/EqualitiesCheck.cpp clang-tools-extra/clang-tidy/misc/EqualitiesCheck.h
+
 # register a new check in the misc module
 new-check-%:
 	git stash --include-untracked -m "Stash modification before commiting a new check"
