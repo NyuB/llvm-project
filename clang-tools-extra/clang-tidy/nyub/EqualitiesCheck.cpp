@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "EqualitiesCheck.h"
+#include "Helpers.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include <algorithm>
 #include <iostream>
@@ -17,16 +18,6 @@ using clang::ast_matchers::MatchFinder;
 
 namespace clang::tidy::nyub {
 
-bool isAnnotatedForEquality(const clang::CXXMethodDecl *MatchedDecl) {
-
-  const auto attrs = MatchedDecl->getAttrs();
-  return std::find_if(attrs.begin(), attrs.end(), [](const Attr *attr) {
-           return attr->getKind() == attr::Kind::Annotate &&
-                  static_cast<const AnnotateAttr *>(attr)->getAnnotation() ==
-                      "deriving_eq";
-         }) != attrs.end();
-}
-
 void EqualitiesCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
       cxxMethodDecl(hasAttr(attr::Kind::Annotate)).bind("function"), this);
@@ -34,7 +25,7 @@ void EqualitiesCheck::registerMatchers(MatchFinder *Finder) {
 
 void EqualitiesCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *MatchedDecl = Result.Nodes.getNodeAs<CXXMethodDecl>("function");
-  if (!isAnnotatedForEquality(MatchedDecl))
+  if (!isAnnotatedFor(MatchedDecl, "deriving_eq"))
     return;
   signatureCheck(MatchedDecl);
   bodyCheck(MatchedDecl);
@@ -68,16 +59,6 @@ void EqualitiesCheck::bodyCheck(const clang::CXXMethodDecl *MatchedDecl) {
         << FixItHint::CreateReplacement(
                MatchedDecl->getBody()->getSourceRange(), makeBody(MatchedDecl));
   }
-}
-
-QualType dereferencedParamType(QualType paramType) {
-  while (paramType->isPointerOrReferenceType()) {
-    if (paramType->isPointerType())
-      paramType = paramType->getAs<PointerType>()->getPointeeType();
-    else
-      paramType = paramType->getAs<ReferenceType>()->getPointeeType();
-  }
-  return paramType;
 }
 
 bool EqualitiesCheck::isSignatureValid(
@@ -221,27 +202,6 @@ parentFields(const clang::CXXMethodDecl *MatchedDecl) {
   for (const auto *f : MatchedDecl->getParent()->fields())
     fields.push_back(f);
   return fields;
-}
-
-const Stmt *unwrap(const Stmt *stmt) {
-  while (stmt->getStmtClass() == Stmt::ParenExprClass) {
-    stmt = *stmt->child_begin();
-  }
-  return stmt;
-}
-
-/**
- * @brief safe match + cast for a given ast node
- * @note @p stmt is unwrap ped first if nested in parenthesis expressions
- * @return @p stmt casted as @p AstClass or nullptr if @p stmt is not a node of
- * class @p AstClassTag
- */
-template <Stmt::StmtClass AstClassTag, typename AstClass>
-const AstClass *getAs(const Stmt *stmt) {
-  stmt = unwrap(stmt);
-  if (stmt->getStmtClass() != AstClassTag)
-    return nullptr;
-  return static_cast<const AstClass *>(stmt);
 }
 
 bool isFieldEquality(const FieldDecl *field, const BinaryOperator *binary) {
