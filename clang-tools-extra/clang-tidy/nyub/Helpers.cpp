@@ -9,10 +9,9 @@ const Stmt *unwrap(const Stmt *stmt) {
   return stmt;
 }
 
-bool isAnnotatedFor(const clang::CXXMethodDecl *MatchedDecl,
-                    const std::string &label) {
+bool isAnnotatedWith(const clang::Decl *decl, const std::string &label) {
 
-  const auto attrs = MatchedDecl->getAttrs();
+  const auto attrs = decl->getAttrs();
   return std::find_if(attrs.begin(), attrs.end(), [&](const Attr *attr) {
            return attr->getKind() == attr::Kind::Annotate &&
                   static_cast<const AnnotateAttr *>(attr)->getAnnotation() ==

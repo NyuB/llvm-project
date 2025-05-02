@@ -4,8 +4,7 @@
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 
 namespace clang::tidy::nyub {
-bool isAnnotatedFor(const clang::CXXMethodDecl *MatchedDecl,
-                    const std::string &label);
+bool isAnnotatedWith(const clang::Decl *decl, const std::string &label);
 QualType dereferencedParamType(QualType paramType);
 const Stmt *unwrap(const Stmt *stmt);
 /**

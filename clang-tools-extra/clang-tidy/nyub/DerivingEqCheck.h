@@ -10,6 +10,7 @@
 #define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_NYUB_DERIVINGEQCHECK_H
 
 #include "../ClangTidyCheck.h"
+#include <vector>
 
 namespace clang::tidy::nyub {
 
@@ -40,6 +41,9 @@ private:
   bool isReturnEqualityConjonction(const clang::CXXMethodDecl *MatchedDecl,
                                    const ReturnStmt *expr);
 };
+
+std::vector<const FieldDecl *>
+parentFields(const clang::CXXMethodDecl *MatchedDecl);
 
 } // namespace clang::tidy::nyub
 
