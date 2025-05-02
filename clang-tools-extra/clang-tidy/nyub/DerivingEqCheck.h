@@ -14,10 +14,22 @@
 
 namespace clang::tidy::nyub {
 
-/// FIXME: Write a short description.
+/// Ensure that methods annotated with "deriving_eq" implement equality by
+/// recursively comparing each field. Generate the boilerplated signature and
+/// body as a fix.
+/// ```cpp
+/// struct S {
+///   int i;
+///   int j;
 ///
-/// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/misc/equalities.html
+///   [[clang::annotate("deriving_eq")]]
+///   bool eq(const S &other) const {
+///     return (i == other.i) && (j == other.j);
+///   }
+/// }
+/// ```
+///
+/// @example ../../test/clang-tidy/checkers/nyub/deriving_eq.cpp
 class DerivingEqCheck : public ClangTidyCheck {
 public:
   DerivingEqCheck(StringRef Name, ClangTidyContext *Context)
