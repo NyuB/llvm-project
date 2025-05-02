@@ -22,16 +22,16 @@ $(BUILD_DIR)/target_list.txt:
 CLANG_TIDY_EXTRA_ARGS=--extra-arg=-fno-delayed-template-parsing
 
 demo: rebuild
-	build/bin/clang-tidy.exe $(CLANG_TIDY_EXTRA_ARGS) -checks=-*,misc-equalities clang-tools-extra/test/clang-tidy/checkers/misc/equalities.cpp --
+	build/bin/clang-tidy.exe $(CLANG_TIDY_EXTRA_ARGS) -checks=-*,nyub-equalities clang-tools-extra/test/clang-tidy/checkers/nyub/equalities.cpp --
 demo-fix: rebuild
-	build/bin/clang-tidy.exe $(CLANG_TIDY_EXTRA_ARGS) --fix -checks=-*,misc-equalities clang-tools-extra/test/clang-tidy/checkers/misc/equalities.cpp --
+	build/bin/clang-tidy.exe $(CLANG_TIDY_EXTRA_ARGS) --fix -checks=-*,nyub-equalities clang-tools-extra/test/clang-tidy/checkers/nyub/equalities.cpp --
 ast:
-	clang -Xclang -ast-dump clang-tools-extra/test/clang-tidy/checkers/misc/equalities.cpp
+	clang -Xclang -ast-dump clang-tools-extra/test/clang-tidy/checkers/nyub/equalities.cpp
 query:
-	build/bin/clang-query.exe clang-tools-extra/test/clang-tidy/checkers/misc/equalities.cpp --
+	build/bin/clang-query.exe clang-tools-extra/test/clang-tidy/checkers/nyub/equalities.cpp --
 
 test: rebuild
-	LIT_FILTER="checkers/misc/equalities" ninja -C $(BUILD_DIR) check-clang-tools
+	LIT_FILTER=checkers/nyub/equalities ninja -C $(BUILD_DIR) check-clang-tools
 
 CHECKS = -*
 CHECKS := $(CHECKS),bugprone-*
@@ -42,9 +42,9 @@ CHECKS := $(CHECKS),-google-readability-braces-around-statements
 CHECKS := $(CHECKS),llvm-*
 CHECKS := $(CHECKS),misc-const-correctness
 tidy: rebuild
-	build/bin/clang-tidy.exe -p $(BUILD_DIR) $(CLANG_TIDY_EXTRA_ARGS) -checks=$(CHECKS) clang-tools-extra/clang-tidy/misc/EqualitiesCheck.cpp clang-tools-extra/clang-tidy/misc/EqualitiesCheck.h
+	build/bin/clang-tidy.exe -p $(BUILD_DIR) $(CLANG_TIDY_EXTRA_ARGS) -checks=$(CHECKS) clang-tools-extra/clang-tidy/nyub/EqualitiesCheck.cpp clang-tools-extra/clang-tidy/nyub/EqualitiesCheck.h
 tidy-fix: rebuild
-	build/bin/clang-tidy.exe -fix -p $(BUILD_DIR) $(CLANG_TIDY_EXTRA_ARGS) -checks=$(CHECKS) clang-tools-extra/clang-tidy/misc/EqualitiesCheck.cpp clang-tools-extra/clang-tidy/misc/EqualitiesCheck.h
+	build/bin/clang-tidy.exe -fix -p $(BUILD_DIR) $(CLANG_TIDY_EXTRA_ARGS) -checks=$(CHECKS) clang-tools-extra/clang-tidy/nyub/EqualitiesCheck.cpp clang-tools-extra/clang-tidy/nyub/EqualitiesCheck.h
 
 # register a new check in the misc module
 new-check-%:

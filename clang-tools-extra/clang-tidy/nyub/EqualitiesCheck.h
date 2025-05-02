@@ -6,12 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MISC_EQUALITIESCHECK_H
-#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MISC_EQUALITIESCHECK_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_NYUB_EQUALITIESCHECK_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_NYUB_EQUALITIESCHECK_H
 
 #include "../ClangTidyCheck.h"
 
-namespace clang::tidy::misc {
+namespace clang::tidy::nyub {
 
 /// FIXME: Write a short description.
 ///
@@ -37,9 +37,10 @@ private:
   static std::string makeBody(const clang::CXXMethodDecl *MatchedDecl);
 
   bool isReturnTrue(const ReturnStmt *expr);
-  bool isReturnEqualityConjonction(const clang::CXXMethodDecl *MatchedDecl, const ReturnStmt *expr);
+  bool isReturnEqualityConjonction(const clang::CXXMethodDecl *MatchedDecl,
+                                   const ReturnStmt *expr);
 };
 
-} // namespace clang::tidy::misc
+} // namespace clang::tidy::nyub
 
-#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MISC_EQUALITIESCHECK_H
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_NYUB_EQUALITIESCHECK_H

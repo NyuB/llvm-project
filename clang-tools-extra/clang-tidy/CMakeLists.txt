@@ -71,6 +71,7 @@ add_subdirectory(modernize)
 if(CLANG_TIDY_ENABLE_STATIC_ANALYZER)
   add_subdirectory(mpi)
 endif()
+add_subdirectory(nyub)
 add_subdirectory(objc)
 add_subdirectory(openmp)
 add_subdirectory(performance)
@@ -95,6 +96,7 @@ set(ALL_CLANG_TIDY_CHECKS
   clangTidyLLVMLibcModule
   clangTidyMiscModule
   clangTidyModernizeModule
+  clangTidyNyubModule
   clangTidyObjCModule
   clangTidyOpenMPModule
   clangTidyPerformanceModule

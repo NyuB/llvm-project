@@ -13,7 +13,6 @@
 #include "ConstCorrectnessCheck.h"
 #include "CoroutineHostileRAIICheck.h"
 #include "DefinitionsInHeadersCheck.h"
-#include "EqualitiesCheck.h"
 #include "HeaderIncludeCycleCheck.h"
 #include "IncludeCleanerCheck.h"
 #include "MisleadingBidirectionalCheck.h"
@@ -54,8 +53,6 @@ public:
         "misc-coroutine-hostile-raii");
     CheckFactories.registerCheck<DefinitionsInHeadersCheck>(
         "misc-definitions-in-headers");
-    CheckFactories.registerCheck<EqualitiesCheck>(
-        "misc-equalities");
     CheckFactories.registerCheck<HeaderIncludeCycleCheck>(
         "misc-header-include-cycle");
     CheckFactories.registerCheck<IncludeCleanerCheck>("misc-include-cleaner");
