@@ -147,6 +147,18 @@ bool isSingleReturnStmt(const Stmt *body) {
   return true;
 }
 
+bool traverseEqExpr(const clang::CXXMethodDecl *MatchedDecl, ReturnStmt *expr) {
+  const auto parent = MatchedDecl->getParent();
+  const auto returnedExpr = *expr->child_begin();
+  if (parent->field_empty()) {
+    if (returnedExpr->getStmtClass() != Stmt::CXXBoolLiteralExprClass) {
+    }
+  }
+  auto binary = static_cast<BinaryOperator *>(*expr->child_begin());
+  for (const auto *field : MatchedDecl->getParent()->fields()) {
+  }
+}
+
 bool EqualitiesCheck::isBodyValid(const clang::CXXMethodDecl *MatchedDecl) {
   auto *const body = MatchedDecl->getBody();
   if (!body) {
@@ -167,19 +179,17 @@ bool EqualitiesCheck::isBodyValid(const clang::CXXMethodDecl *MatchedDecl) {
   }
   const ReturnStmt *returnStmt =
       static_cast<ReturnStmt *>(*MatchedDecl->getBody()->children().begin());
-  for (const auto *child : returnStmt->children()) {
-    if (child->getStmtClass() != Stmt::BinaryOperatorClass) {
-      diag(child->getBeginLoc(), "function %0 returned expression should be a "
-                                 "boolean conjonction of equalities")
-          << MatchedDecl;
-      return false;
-    }
-  }
-  return true;
+
+  if (MatchedDecl->getParent()->field_empty())
+    return isReturnTrue(returnStmt);
+  else
+    return isReturnEqualityConjonction(MatchedDecl, returnStmt);
 }
 
 std::string EqualitiesCheck::makeBody(const CXXMethodDecl *MatchedDecl) {
   const auto *parent = MatchedDecl->getParent();
+  if (parent->field_empty())
+    return "{ return true; }";
   std::string paramName;
   if (MatchedDecl->param_size() != 0) {
     paramName = MatchedDecl->getParamDecl(0)->getNameAsString();
@@ -203,9 +213,32 @@ std::string EqualitiesCheck::makeBody(const CXXMethodDecl *MatchedDecl) {
     noFieldAddedYet = false;
   }
   result += "; }";
-  if (noFieldAddedYet)
-    return "{ return true; }";
+
   return result;
+}
+
+bool EqualitiesCheck::isReturnTrue(const ReturnStmt *expr) {
+  const auto returned = *expr->child_begin();
+  if (returned->getStmtClass() != Stmt::CXXBoolLiteralExprClass)
+    return false;
+  else {
+    const auto returnedBool = static_cast<const CXXBoolLiteralExpr *>(returned);
+    return returnedBool->getValue() == true;
+  }
+}
+
+bool EqualitiesCheck::isReturnEqualityConjonction(
+    const clang::CXXMethodDecl *MatchedDecl, const ReturnStmt *expr) {
+  if (expr->child_begin() == expr->child_end())
+    return false;
+  const auto child = *expr->child_begin();
+  if (child->getStmtClass() != Stmt::BinaryOperatorClass) {
+    diag(child->getBeginLoc(), "function %0 returned expression should be a "
+                               "boolean conjonction of equalities")
+        << MatchedDecl;
+    return false;
+  }
+  return true;
 }
 
 std::string EqualitiesCheck::makeSignature(const CXXMethodDecl *MatchedDecl) {

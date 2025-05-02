@@ -35,6 +35,9 @@ private:
   void bodyCheck(const clang::CXXMethodDecl *MatchedDecl);
   bool isBodyValid(const clang::CXXMethodDecl *MatchedDecl);
   static std::string makeBody(const clang::CXXMethodDecl *MatchedDecl);
+
+  bool isReturnTrue(const ReturnStmt *expr);
+  bool isReturnEqualityConjonction(const clang::CXXMethodDecl *MatchedDecl, const ReturnStmt *expr);
 };
 
 } // namespace clang::tidy::misc
