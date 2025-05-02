@@ -61,6 +61,15 @@ struct S {
     bool f_defined_later(const S& s) const;
 };
 
+struct Empty {
+    [[clang::annotate("deriving_eq")]]
+    bool f_trivial(Empty const& e) const {
+        return false && false;
+    }
+    // CHECK-MESSAGES: :[[@LINE-3]]:42: warning: function 'f_trivial' should consist of a single return statement composed of binary equality comparisons
+    // CHECK-FIXES: bool f_trivial(Empty const& e) const { return true; }
+};
+
 
 bool S::f_defined_later(const S& s) const {
     return true;
