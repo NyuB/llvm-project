@@ -4,7 +4,7 @@ set(LLVM_LINK_COMPONENTS
   )
 
 add_clang_library(clangTidyNyubModule STATIC
-  EqualitiesCheck.cpp
+  DerivingEqCheck.cpp
   Helpers.cpp
   NyubTidyModule.cpp
 

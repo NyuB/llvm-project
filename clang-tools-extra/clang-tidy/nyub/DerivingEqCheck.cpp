@@ -1,4 +1,4 @@
-//===--- EqualitiesCheck.cpp - clang-tidy ---------------------------------===//
+//===--- DerivingEqCheck.cpp - clang-tidy ---------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "EqualitiesCheck.h"
+#include "DerivingEqCheck.h"
 #include "Helpers.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include <algorithm>
@@ -18,12 +18,12 @@ using clang::ast_matchers::MatchFinder;
 
 namespace clang::tidy::nyub {
 
-void EqualitiesCheck::registerMatchers(MatchFinder *Finder) {
+void DerivingEqCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
       cxxMethodDecl(hasAttr(attr::Kind::Annotate)).bind("function"), this);
 }
 
-void EqualitiesCheck::check(const MatchFinder::MatchResult &Result) {
+void DerivingEqCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *MatchedDecl = Result.Nodes.getNodeAs<CXXMethodDecl>("function");
   if (!isAnnotatedFor(MatchedDecl, "deriving_eq"))
     return;
@@ -31,7 +31,7 @@ void EqualitiesCheck::check(const MatchFinder::MatchResult &Result) {
   bodyCheck(MatchedDecl);
 }
 
-void EqualitiesCheck::signatureCheck(const clang::CXXMethodDecl *MatchedDecl) {
+void DerivingEqCheck::signatureCheck(const clang::CXXMethodDecl *MatchedDecl) {
   if (!isSignatureValid(MatchedDecl)) {
     SourceRange signatureToReplace;
     if (MatchedDecl->isThisDeclarationADefinition()) {
@@ -50,7 +50,7 @@ void EqualitiesCheck::signatureCheck(const clang::CXXMethodDecl *MatchedDecl) {
   }
 }
 
-void EqualitiesCheck::bodyCheck(const clang::CXXMethodDecl *MatchedDecl) {
+void DerivingEqCheck::bodyCheck(const clang::CXXMethodDecl *MatchedDecl) {
   if (!isBodyValid(MatchedDecl)) {
     diag(MatchedDecl->getBody()->getBeginLoc(),
          "function %0 should consist of a single return statement composed of "
@@ -61,7 +61,7 @@ void EqualitiesCheck::bodyCheck(const clang::CXXMethodDecl *MatchedDecl) {
   }
 }
 
-bool EqualitiesCheck::isSignatureValid(
+bool DerivingEqCheck::isSignatureValid(
     const clang::CXXMethodDecl *MatchedDecl) {
   bool result = true;
   if (MatchedDecl->param_size() != 1) {
@@ -128,7 +128,7 @@ bool isSingleReturnStmt(const Stmt *body) {
   return true;
 }
 
-bool EqualitiesCheck::isBodyValid(const clang::CXXMethodDecl *MatchedDecl) {
+bool DerivingEqCheck::isBodyValid(const clang::CXXMethodDecl *MatchedDecl) {
   auto *const body = MatchedDecl->getBody();
   if (!body) {
     // Just a declaration
@@ -154,7 +154,7 @@ bool EqualitiesCheck::isBodyValid(const clang::CXXMethodDecl *MatchedDecl) {
   return isReturnEqualityConjonction(MatchedDecl, returnStmt);
 }
 
-std::string EqualitiesCheck::makeBody(const CXXMethodDecl *MatchedDecl) {
+std::string DerivingEqCheck::makeBody(const CXXMethodDecl *MatchedDecl) {
   const auto *parent = MatchedDecl->getParent();
   if (parent->field_empty())
     return "{ return true; }";
@@ -185,7 +185,7 @@ std::string EqualitiesCheck::makeBody(const CXXMethodDecl *MatchedDecl) {
   return result;
 }
 
-bool EqualitiesCheck::isReturnTrue(const ReturnStmt *expr) {
+bool DerivingEqCheck::isReturnTrue(const ReturnStmt *expr) {
   const auto *const returned = *expr->child_begin();
   if (returned->getStmtClass() != Stmt::CXXBoolLiteralExprClass)
     return false;
@@ -239,7 +239,7 @@ const BinaryOperator *getAsBinaryOperator(const Stmt *expr) {
   return getAs<Stmt::BinaryOperatorClass, BinaryOperator>(expr);
 }
 
-bool EqualitiesCheck::isReturnEqualityConjonction(
+bool DerivingEqCheck::isReturnEqualityConjonction(
     const clang::CXXMethodDecl *MatchedDecl, const ReturnStmt *expr) {
   if (expr->child_begin() == expr->child_end())
     return false;
@@ -280,7 +280,7 @@ bool EqualitiesCheck::isReturnEqualityConjonction(
   return true;
 }
 
-std::string EqualitiesCheck::makeSignature(const CXXMethodDecl *MatchedDecl) {
+std::string DerivingEqCheck::makeSignature(const CXXMethodDecl *MatchedDecl) {
   const auto *parent = MatchedDecl->getParent();
   const auto parentType =
       MatchedDecl->getASTContext()

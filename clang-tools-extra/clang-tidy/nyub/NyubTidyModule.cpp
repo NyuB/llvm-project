@@ -1,7 +1,7 @@
 #include "../ClangTidy.h"
 #include "../ClangTidyModule.h"
 #include "../ClangTidyModuleRegistry.h"
-#include "EqualitiesCheck.h"
+#include "DerivingEqCheck.h"
 
 namespace clang::tidy {
 namespace nyub {
@@ -9,7 +9,7 @@ namespace nyub {
 class NyubTidyModule : public ClangTidyModule {
 public:
   void addCheckFactories(ClangTidyCheckFactories &CheckFactories) override {
-    CheckFactories.registerCheck<EqualitiesCheck>("nyub-equalities");
+    CheckFactories.registerCheck<DerivingEqCheck>("nyub-deriving-eq");
   }
 };
 static ClangTidyModuleRegistry::Add<NyubTidyModule> X("nyub-module",
