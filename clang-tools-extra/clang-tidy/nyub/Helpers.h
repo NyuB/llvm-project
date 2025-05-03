@@ -9,7 +9,7 @@ QualType dereferencedParamType(QualType paramType);
 const Stmt *unwrap(const Stmt *stmt);
 /**
  * @brief safe match + cast for a given ast node
- * @note @p stmt is unwrap ped first if nested in parenthesis expressions
+ * @note @p stmt is unwrapped first if nested in parenthesis expressions
  * @return @p stmt casted as @p AstClass or nullptr if @p stmt is not a node of
  * class @p AstClassTag
  */
