@@ -7,7 +7,7 @@ ENABLED_PROJECTS=clang;clang-tools-extra
 
 # CMake configure phase. This should be run prior to any other action
 configure:
-	cmake -B $(BUILD_DIR) -DLLVM_ENABLE_PROJECTS=$(ENABLED_PROJECTS) -DCMAKE_BUILD_TYPE=Release -G $(GENERATOR) llvm
+	cmake -DCMAKE_CXX_COMPILER=$(CXX_COMPILER) -B $(BUILD_DIR) -DLLVM_ENABLE_PROJECTS=$(ENABLED_PROJECTS) -DCMAKE_BUILD_TYPE=Release -G $(GENERATOR) llvm
 
 # Build clang-tidy and clang-query
 rebuild:
@@ -34,7 +34,7 @@ ast:
 query:
 	$(CLANG_QUERY) $(DEMO_FILE) --
 
-test: export LIT_FILTER=checkers/nyub/deriving_eq
+test: export LIT_FILTER=checkers/nyub/
 test: rebuild
 	ninja -C $(BUILD_DIR) check-clang-tools
 
