@@ -5,6 +5,7 @@ set(LLVM_LINK_COMPONENTS
 
 add_clang_library(clangTidyNyubModule STATIC
   DerivingEqCheck.cpp
+  DerivingShowCheck.cpp
   Helpers.cpp
   NyubTidyModule.cpp
 
