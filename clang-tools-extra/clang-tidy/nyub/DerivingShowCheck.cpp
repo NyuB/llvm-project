@@ -37,9 +37,8 @@ SourceRange signatureRange(const clang::FunctionDecl *functionDecl) {
     auto body = functionDecl->getBody()->getBeginLoc();
     // Keep leading '{'
     return SourceRange(functionDecl->getBeginLoc(), body.getLocWithOffset(-1));
-  } else {
-    return functionDecl->getSourceRange();
   }
+  return functionDecl->getSourceRange();
 }
 
 void DerivingShowCheck::checkSignature(const clang::FunctionDecl *MatchedDecl) {
@@ -81,8 +80,8 @@ bool DerivingShowCheck::isSignatureValid(
                   // non-parameter checks above
   }
 
-  const auto ostreamParameter = MatchedDecl->parameters()[0];
-  const auto thisParameter = MatchedDecl->parameters()[1];
+  auto *const ostreamParameter = MatchedDecl->parameters()[0];
+  auto *const thisParameter = MatchedDecl->parameters()[1];
 
   auto ostreamParameterType = ostreamParameter->getType();
   if (!ostreamParameterType->isLValueReferenceType()) {

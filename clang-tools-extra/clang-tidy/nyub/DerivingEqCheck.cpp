@@ -189,7 +189,8 @@ bool DerivingEqCheck::isReturnTrue(const ReturnStmt *expr) {
   const auto *const returned = *expr->child_begin();
   if (returned->getStmtClass() != Stmt::CXXBoolLiteralExprClass)
     return false;
-  const auto returnedBool = static_cast<const CXXBoolLiteralExpr *>(returned);
+  const auto *const returnedBool =
+      static_cast<const CXXBoolLiteralExpr *>(returned);
   return returnedBool->getValue() == true;
 }
 

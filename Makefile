@@ -49,9 +49,9 @@ CHECKS := $(CHECKS),-google-readability-braces-around-statements
 CHECKS := $(CHECKS),llvm-*
 CHECKS := $(CHECKS),misc-const-correctness
 tidy: rebuild
-	$(CLANG_TIDY) -p $(BUILD_DIR) $(CLANG_TIDY_EXTRA_ARGS) -checks=$(CHECKS) $(SOURCES)
+	$(CLANG_TIDY) -p $(BUILD_DIR) -checks=$(CHECKS) $(SOURCES)
 tidy-fix: rebuild
-	$(CLANG_TIDY) -fix -p $(BUILD_DIR) $(CLANG_TIDY_EXTRA_ARGS) -checks=$(CHECKS) $(SOURCES)
+	$(CLANG_TIDY) -fix -p $(BUILD_DIR) -checks=$(CHECKS) $(SOURCES)
 
 # register a new check in the misc module
 new-check-%:
