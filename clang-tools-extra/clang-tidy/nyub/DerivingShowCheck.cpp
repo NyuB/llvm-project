@@ -8,6 +8,17 @@ using clang::ast_matchers::hasAttr;
 using clang::ast_matchers::MatchFinder;
 
 namespace clang::tidy::nyub {
+const std::string expectedLeftHandStreamType = "std::ostream";
+
+bool isMethod(const clang::FunctionDecl *MatchedDecl) {
+  return MatchedDecl->getKind() == Decl::CXXMethod;
+}
+
+bool isMethodDefinitionOutsideClassDeclaration(
+    const clang::FunctionDecl *MatchedDecl) {
+  return isMethod(MatchedDecl) && MatchedDecl->isThisDeclarationADefinition() &&
+         (MatchedDecl->getFirstDecl() != MatchedDecl);
+}
 
 void DerivingShowCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
@@ -21,38 +32,57 @@ void DerivingShowCheck::check(const MatchFinder::MatchResult &Result) {
   checkSignature(MatchedDecl);
 }
 
+SourceRange signatureRange(const clang::FunctionDecl *functionDecl) {
+  if (functionDecl->isThisDeclarationADefinition()) {
+    auto body = functionDecl->getBody()->getBeginLoc();
+    // Keep leading '{'
+    return SourceRange(functionDecl->getBeginLoc(), body.getLocWithOffset(-1));
+  } else {
+    return functionDecl->getSourceRange();
+  }
+}
+
 void DerivingShowCheck::checkSignature(const clang::FunctionDecl *MatchedDecl) {
   if (!isSignatureValid(MatchedDecl)) {
-    SourceRange signatureToReplace;
-    if (MatchedDecl->isThisDeclarationADefinition()) {
-      auto body = MatchedDecl->getBody()->getBeginLoc();
-      // Keep leading '{'
-      signatureToReplace =
-          SourceRange(MatchedDecl->getBeginLoc(), body.getLocWithOffset(-1));
-    } else {
-      signatureToReplace = MatchedDecl->getSourceRange();
-    }
     diag(MatchedDecl->getLocation(),
          "function %0 signature is not suitable for string display")
         << MatchedDecl
-        << FixItHint::CreateReplacement(signatureToReplace,
+        << FixItHint::CreateReplacement(signatureRange(MatchedDecl),
                                         makeSignature(MatchedDecl));
   }
 }
 
 bool DerivingShowCheck::isSignatureValid(
     const clang::FunctionDecl *MatchedDecl) {
+  bool result = true;
+
+  auto returnType =
+      dereferencedParamType(MatchedDecl->getReturnType().getUnqualifiedType());
+  if (returnType.getAsString() != expectedLeftHandStreamType) {
+    diag(MatchedDecl->getLocation(),
+         "function %0 should return %1 instead of %2")
+        << MatchedDecl << expectedLeftHandStreamType
+        << returnType.getAsString();
+    result = false;
+  }
+
+  if (isMethod(MatchedDecl) &&
+      !isMethodDefinitionOutsideClassDeclaration(MatchedDecl) &&
+      !MatchedDecl->isStatic()) {
+    diag(MatchedDecl->getLocation(), "function %0 should be static")
+        << MatchedDecl;
+    result = false;
+  }
 
   if (MatchedDecl->param_size() != 2) {
     diag(MatchedDecl->getLocation(), "function %0 should take 2 parameters")
         << MatchedDecl;
-    return false;
+    return false; // so that following code can assume 2 parameters, put
+                  // non-parameter checks above
   }
 
   const auto ostreamParameter = MatchedDecl->parameters()[0];
   const auto thisParameter = MatchedDecl->parameters()[1];
-
-  bool result = true;
 
   auto ostreamParameterType = ostreamParameter->getType();
   if (!ostreamParameterType->isLValueReferenceType()) {
@@ -65,7 +95,7 @@ bool DerivingShowCheck::isSignatureValid(
   ostreamParameterType = dereferencedParamType(ostreamParameterType);
 
   if (ostreamParameterType.getUnqualifiedType().getAsString() !=
-      "std::ostream") {
+      expectedLeftHandStreamType) {
     diag(ostreamParameter->getLocation(),
          "parameter %0 should be of type std::ostream but is %1")
         << ostreamParameter << ostreamParameterType;
@@ -92,23 +122,29 @@ std::string
 DerivingShowCheck::makeSignature(const clang::FunctionDecl *MatchedDecl) {
   std::string paramName = "_this";
   std::string paramType = "T";
-  bool isMethod = MatchedDecl->getKind() == Decl::CXXMethod;
-  std::string staticPrefix = isMethod ? "static " : "";
+  const std::string staticPrefix =
+      (isMethod && !MatchedDecl->isThisDeclarationADefinition()) ? "static "
+                                                                 : "";
 
   if (MatchedDecl->param_size() > 1) {
     paramName = MatchedDecl->parameters()[1]->getNameAsString();
     paramType = dereferencedParamType(MatchedDecl->parameters()[1]->getType())
                     .getUnqualifiedType()
                     .getAsString();
-  } else if (isMethod) {
-    const auto methodDecl = static_cast<const CXXMethodDecl *>(MatchedDecl);
+  } else if (isMethod(MatchedDecl)) {
+    const auto *const methodDecl =
+        static_cast<const CXXMethodDecl *>(MatchedDecl);
     paramType = methodDecl->getParent()->getNameAsString();
     paramName = paramType;
     uncapitalize(&paramName);
   }
+  const std::string typePrefix =
+      isMethodDefinitionOutsideClassDeclaration(MatchedDecl) ? paramType + "::"
+                                                             : "";
 
-  return staticPrefix + "std::ostream& " + MatchedDecl->getNameAsString() +
-         "(std::ostream& os, " + paramType + " const& " + paramName + ")";
+  return staticPrefix + "std::ostream& " + typePrefix +
+         MatchedDecl->getNameAsString() + "(std::ostream& os, " + paramType +
+         " const& " + paramName + ")";
 }
 
 } // namespace clang::tidy::nyub
