@@ -28,4 +28,30 @@ QualType dereferencedParamType(QualType paramType) {
   }
   return paramType;
 }
+
+const BinaryOperator *getAsBinaryOperator(const Stmt *expr) {
+  return getAs<Stmt::BinaryOperatorClass, BinaryOperator>(expr);
+}
+
+const CXXOperatorCallExpr *getAsCXXOperator(const Stmt *expr) {
+  return getAs<Stmt::CXXOperatorCallExprClass, CXXOperatorCallExpr>(expr);
+}
+
+const ReturnStmt *getBodyAsSingleReturnStmt(const FunctionDecl *decl) {
+  auto *const body = decl->getBody();
+  if (!body || body->children().empty())
+    return nullptr;
+  auto first = body->child_begin();
+  if (first->getStmtClass() != Stmt::ReturnStmtClass)
+    return nullptr;
+
+  const auto *const returnStmt =
+      getAs<Stmt::ReturnStmtClass, ReturnStmt>(*first);
+
+  first++;
+  if (first != body->child_end())
+    return nullptr;
+
+  return returnStmt;
+}
 } // namespace clang::tidy::nyub
