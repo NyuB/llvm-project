@@ -123,8 +123,9 @@ DerivingShowCheck::makeSignature(const clang::FunctionDecl *MatchedDecl) {
   std::string paramName = "_this";
   std::string paramType = "T";
   const std::string staticPrefix =
-      (isMethod && !MatchedDecl->isThisDeclarationADefinition()) ? "static "
-                                                                 : "";
+      (isMethod(MatchedDecl) && !MatchedDecl->isThisDeclarationADefinition())
+          ? "static "
+          : "";
 
   if (MatchedDecl->param_size() > 1) {
     paramName = MatchedDecl->parameters()[1]->getNameAsString();
