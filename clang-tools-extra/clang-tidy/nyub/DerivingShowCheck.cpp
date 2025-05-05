@@ -30,6 +30,7 @@ void DerivingShowCheck::check(const MatchFinder::MatchResult &Result) {
   if (!isAnnotatedWith(MatchedDecl, "deriving_show"))
     return;
   checkSignature(MatchedDecl);
+  checkBody(MatchedDecl);
 }
 
 SourceRange signatureRange(const clang::FunctionDecl *functionDecl) {
@@ -144,6 +145,79 @@ DerivingShowCheck::makeSignature(const clang::FunctionDecl *MatchedDecl) {
   return staticPrefix + "std::ostream& " + typePrefix +
          MatchedDecl->getNameAsString() + "(std::ostream& os, " + paramType +
          " const& " + paramName + ")";
+}
+
+void DerivingShowCheck::checkBody(const clang::FunctionDecl *MatchedDecl) {
+  if (isBodyValid(MatchedDecl))
+    return;
+  const auto bodyRange = MatchedDecl->getBody()->getSourceRange();
+  diag(bodyRange.getBegin(),
+       "function %0 body is not suitable for string display")
+      << MatchedDecl
+      << FixItHint::CreateReplacement(bodyRange, makeBody(MatchedDecl));
+}
+
+bool DerivingShowCheck::isBodyValid(const clang::FunctionDecl *MatchedDecl) {
+
+  if (!MatchedDecl->isThisDeclarationADefinition() || !MatchedDecl->getBody())
+    return true; // Just a declaration
+
+  const auto *const returnStmt = getBodyAsSingleReturnStmt(MatchedDecl);
+  if (!returnStmt) {
+    diag(MatchedDecl->getBody()->getBeginLoc(),
+         "function %0 body should consist of a single "
+         "return statement")
+        << MatchedDecl;
+    return false;
+  }
+  const auto *const returnedExpr = getAsCXXOperator(returnStmt->getRetValue());
+  if (!returnedExpr ||
+      returnedExpr->getOperator() != OverloadedOperatorKind::OO_LessLess) {
+    diag(MatchedDecl->getBody()->getBeginLoc(),
+         "function %0 body should consist of a single "
+         "return statement chaining << operators")
+        << MatchedDecl;
+    return false;
+  }
+  return true;
+}
+
+std::string quoted(std::string s) { return '"' + s + '"'; }
+
+std::string
+DerivingShowCheck::makeBody(const clang::FunctionDecl *MatchedDecl) {
+  if (MatchedDecl->param_size() != 2)
+    return "{ /* TODO */ }";
+  auto *const firstParam = MatchedDecl->parameters()[0];
+  auto *const secondParam = MatchedDecl->parameters()[1];
+  const auto *const printedType = dereferencedParamType(secondParam->getType())
+                                      ->getUnqualifiedDesugaredType();
+  std::string body = "";
+  if (printedType->isRecordType()) {
+    auto *const record = printedType->getAsCXXRecordDecl();
+    bool first = true;
+    for (auto *const field : record->fields()) {
+      body += " << ";
+      if (!first) {
+        body += quoted(", ." + field->getNameAsString() + " = ");
+      } else {
+        body += quoted("{ ." + field->getNameAsString() + " = ");
+        first = false;
+      }
+      body += " << ";
+      body += secondParam->getNameAsString();
+      body += ".";
+      body += field->getNameAsString();
+    }
+    body += " << " + quoted(" }");
+
+  } else {
+    body += " << " + secondParam->getNameAsString();
+  }
+  body += " << " + quoted(" }");
+  const std::string prefix = "{ return " + firstParam->getNameAsString();
+  const std::string suffix = "; }";
+  return prefix + body + suffix;
 }
 
 } // namespace clang::tidy::nyub

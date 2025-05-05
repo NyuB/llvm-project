@@ -20,6 +20,10 @@ private:
   void checkSignature(const clang::FunctionDecl *MatchedDecl);
   bool isSignatureValid(const clang::FunctionDecl *MatchedDecl);
   static std::string makeSignature(const clang::FunctionDecl *MatchedDecl);
+
+  void checkBody(const clang::FunctionDecl *MatchedDecl);
+  bool isBodyValid(const clang::FunctionDecl *MatchedDecl);
+  static std::string makeBody(const clang::FunctionDecl *MatchedDecl);
 };
 } // namespace clang::tidy::nyub
 #endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_NYUB_DERIVINGSHOWCHECK_H

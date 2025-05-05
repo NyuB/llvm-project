@@ -15,10 +15,15 @@ const Stmt *unwrap(const Stmt *stmt);
  */
 template <Stmt::StmtClass AstClassTag, typename AstClass>
 const AstClass *getAs(const Stmt *stmt) {
+  if (stmt == nullptr)
+    return nullptr;
   stmt = unwrap(stmt);
   if (stmt->getStmtClass() != AstClassTag)
     return nullptr;
   return static_cast<const AstClass *>(stmt);
 }
+const BinaryOperator *getAsBinaryOperator(const Stmt *expr);
+const CXXOperatorCallExpr *getAsCXXOperator(const Stmt *expr);
+const ReturnStmt *getBodyAsSingleReturnStmt(const FunctionDecl *decl);
 } // namespace clang::tidy::nyub
 #endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_NYUB_HELPERS_H

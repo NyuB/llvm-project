@@ -228,10 +228,6 @@ bool isFieldEquality(const FieldDecl *field, const BinaryOperator *binary) {
   return true;
 }
 
-const BinaryOperator *getAsBinaryOperator(const Stmt *expr) {
-  return getAs<Stmt::BinaryOperatorClass, BinaryOperator>(expr);
-}
-
 bool DerivingEqCheck::isReturnEqualityConjonction(
     const clang::CXXMethodDecl *MatchedDecl, const ReturnStmt *expr) {
   if (expr->child_begin() == expr->child_end())

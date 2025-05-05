@@ -1,12 +1,21 @@
 // RUN: %check_clang_tidy %s nyub-deriving-show %t
 
 #include <iosfwd>
+
+//! To avoid having to include the entire ostream headers, just declare a no-op operator<< for ostream
+template<typename T>
+std::ostream& operator<<(std::ostream &os, T const&) {
+    return os;
+}
+
 struct S {
     int i;
     int j;
 
     [[clang::annotate("deriving_show")]]
-    static std::ostream& f_ok(std::ostream& os, S const& s);
+    static std::ostream& f_ok(std::ostream& os, S const& s) {
+        return os << "{ " << ".i = " << s.i << ", .j = " << s.j << " }";
+    }
 
     [[clang::annotate("deriving_show")]]
     static std::ostream& f_ok_defined_later(std::ostream& os, S const& s);
@@ -39,21 +48,32 @@ struct S {
     // CHECK-MESSAGES: [[@LINE-1]]:19: warning: function 'f_no_static' should be static [nyub-deriving-show]
     // CHECK-MESSAGES: [[@LINE-2]]:19: warning: function 'f_no_static' signature is not suitable for string display [nyub-deriving-show]
     // CHECK-FIXES: static std::ostream& f_no_static(std::ostream& os, S const& s);
+
+    // Body-related checks
+    [[clang::annotate("deriving_show")]]
+    static std::ostream& f_missing_body(std::ostream& os, S const& s);
 };
 
 
 std::ostream & S::f_ok_defined_later(std::ostream & os, S const & s)
 {
-    return os;
+    return os << "{ " << ".i = " << s.i << ", .j = " << s.j << " }";
 }
 
-void S::f_ko_defined_later(std::ostream& os, S const& s) { }
+void S::f_ko_defined_later(std::ostream& os, S const& s) { return; }
 // CHECK-MESSAGES: [[@LINE-1]]:9: warning: function 'f_ko_defined_later' should return std::ostream instead of void [nyub-deriving-show]
 // CHECK-MESSAGES: [[@LINE-2]]:9: warning: function 'f_ko_defined_later' signature is not suitable for string display [nyub-deriving-show]
-// CHECK-FIXES: std::ostream& S::f_ko_defined_later(std::ostream& os, S const& s) { }
+// CHECK-MESSAGES: [[@LINE-3]]:58: warning: function 'f_ko_defined_later' body is not suitable for string display [nyub-deriving-show]
+// CHECK-MESSAGES: [[@LINE-4]]:58: warning: function 'f_ko_defined_later' body should consist of a single return statement chaining << operators [nyub-deriving-show]
+// CHECK-FIXES: std::ostream& S::f_ko_defined_later(std::ostream& os, S const& s) { return os << "{ .i = " << s.i << ", .j = " << s.j << " }" << " }"; }
 
 [[clang::annotate("deriving_show")]]
 std::ostream & f_friend_defined_later(std::ostream & os, S const & s)
 {
-    return os;
+    return os << "{ " << ".i = " << s.i << ", .j = " << s.j << " }";
 }
+
+std::ostream& S::f_missing_body(std::ostream& os, S const& s) { }
+// CHECK-MESSAGES: [[@LINE-1]]:63: warning: function 'f_missing_body' body is not suitable for string display [nyub-deriving-show]
+// CHECK-MESSAGES: [[@LINE-2]]:63: warning: function 'f_missing_body' body should consist of a single return statement [nyub-deriving-show]
+// CHECK-FIXES: std::ostream& S::f_missing_body(std::ostream& os, S const& s) { return os << "{ .i = " << s.i << ", .j = " << s.j << " }" << " }"; }
