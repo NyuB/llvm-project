@@ -185,6 +185,43 @@ bool DerivingShowCheck::isBodyValid(const clang::FunctionDecl *MatchedDecl) {
 
 std::string quoted(std::string s) { return '"' + s + '"'; }
 
+std::optional<std::string> prefixAnnotation(const std::string &annotation) {
+  const std::string suffixAnnotation = "deriving_show::prefix";
+  if (annotation.size() < suffixAnnotation.size() + 2)
+    return {};
+  if (annotation.rfind(suffixAnnotation, 0) != 0)
+    return {};
+
+  return annotation.substr(suffixAnnotation.size());
+}
+
+std::optional<std::string> suffixAnnotation(const std::string &annotation) {
+  const std::string suffixAnnotation = "deriving_show::suffix";
+  if (annotation.size() < suffixAnnotation.size() + 2)
+    return {};
+  if (annotation.rfind(suffixAnnotation, 0) != 0)
+    return {};
+
+  return annotation.substr(suffixAnnotation.size());
+}
+
+std::string fieldRepresentation(const std::string &receiver,
+                                const FieldDecl *field) {
+  std::string repr = receiver + "." + field->getNameAsString();
+  for (const auto attr : field->attrs()) {
+    if (attr->getKind() == attr::Kind::Annotate) {
+      std::string annotation =
+          static_cast<const AnnotateAttr *>(attr)->getAnnotation().str();
+      if (const auto suffix = suffixAnnotation(annotation)) {
+        repr += suffix.value();
+      } else if (const auto prefix = prefixAnnotation(annotation)) {
+        repr = prefix.value() + repr;
+      }
+    }
+  }
+  return repr;
+}
+
 std::string
 DerivingShowCheck::makeBody(const clang::FunctionDecl *MatchedDecl) {
   if (MatchedDecl->param_size() != 2)
@@ -206,9 +243,7 @@ DerivingShowCheck::makeBody(const clang::FunctionDecl *MatchedDecl) {
         first = false;
       }
       body += " << ";
-      body += secondParam->getNameAsString();
-      body += ".";
-      body += field->getNameAsString();
+      body += fieldRepresentation(secondParam->getNameAsString(), field);
     }
     body += " << " + quoted(" }");
 

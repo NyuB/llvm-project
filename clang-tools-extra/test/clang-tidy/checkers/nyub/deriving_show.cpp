@@ -77,3 +77,25 @@ std::ostream& S::f_missing_body(std::ostream& os, S const& s) { }
 // CHECK-MESSAGES: [[@LINE-1]]:63: warning: function 'f_missing_body' body is not suitable for string display [nyub-deriving-show]
 // CHECK-MESSAGES: [[@LINE-2]]:63: warning: function 'f_missing_body' body should consist of a single return statement [nyub-deriving-show]
 // CHECK-FIXES: std::ostream& S::f_missing_body(std::ostream& os, S const& s) { return os << "{ .i = " << s.i << ", .j = " << s.j << " }" << " }"; }
+
+struct Qustom {
+    const char* toStr() const {
+        return "Ok";
+    }
+};
+
+struct Transformed {
+    int i;
+    [[clang::annotate("deriving_show::suffix.toStr()")]]
+    Qustom q;
+    
+    [[clang::annotate("deriving_show::prefix\"[\" << ")]]
+    [[clang::annotate("deriving_show::suffix << \"]\"")]]
+    bool b;
+
+    [[clang::annotate("deriving_show")]]
+    static std::ostream& f_missing_body(std::ostream& os, Transformed const& t) { }
+    // CHECK-MESSAGES: [[@LINE-1]]:81: warning: function 'f_missing_body' body is not suitable for string display [nyub-deriving-show]
+    // CHECK-MESSAGES: [[@LINE-2]]:81: warning: function 'f_missing_body' body should consist of a single return statement [nyub-deriving-show]
+    // CHECK-FIXES: static std::ostream& f_missing_body(std::ostream& os, Transformed const& t) { return os << "{ .i = " << t.i << ", .q = " << t.q.toStr() << ", .b = " << "[" << t.b << "]" << " }" << " }"; }
+};
