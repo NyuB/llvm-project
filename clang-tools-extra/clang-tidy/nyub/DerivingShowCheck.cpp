@@ -207,9 +207,9 @@ std::optional<std::string> subAnnotation(const std::string &annotationTag,
 std::string fieldRepresentation(const std::string &receiver,
                                 const FieldDecl *field) {
   std::string repr = receiver + "." + field->getNameAsString();
-  for (const auto attr : field->attrs()) {
+  for (auto *const attr : field->attrs()) {
     if (attr->getKind() == attr::Kind::Annotate) {
-      std::string annotation =
+      const std::string annotation =
           static_cast<const AnnotateAttr *>(attr)->getAnnotation().str();
       if (const auto suffix =
               subAnnotation("deriving_show::suffix", annotation)) {
