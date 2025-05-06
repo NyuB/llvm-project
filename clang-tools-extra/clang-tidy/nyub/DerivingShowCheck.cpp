@@ -250,7 +250,7 @@ DerivingShowCheck::makeBody(const clang::FunctionDecl *MatchedDecl) {
   } else {
     body += " << " + secondParam->getNameAsString();
   }
-  body += " << " + quoted(" }");
+
   const std::string prefix = "{ return " + firstParam->getNameAsString();
   const std::string suffix = "; }";
   return prefix + body + suffix;

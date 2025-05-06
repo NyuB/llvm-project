@@ -65,7 +65,7 @@ void S::f_ko_defined_later(std::ostream& os, S const& s) { return; }
 // CHECK-MESSAGES: [[@LINE-2]]:9: warning: function 'f_ko_defined_later' signature is not suitable for string display [nyub-deriving-show]
 // CHECK-MESSAGES: [[@LINE-3]]:58: warning: function 'f_ko_defined_later' body is not suitable for string display [nyub-deriving-show]
 // CHECK-MESSAGES: [[@LINE-4]]:58: warning: function 'f_ko_defined_later' body should consist of a single return statement chaining << operators [nyub-deriving-show]
-// CHECK-FIXES: std::ostream& S::f_ko_defined_later(std::ostream& os, S const& s) { return os << "{ .i = " << s.i << ", .j = " << s.j << " }" << " }"; }
+// CHECK-FIXES: std::ostream& S::f_ko_defined_later(std::ostream& os, S const& s) { return os << "{ .i = " << s.i << ", .j = " << s.j << " }"; }
 
 [[clang::annotate("deriving_show")]]
 std::ostream & f_friend_defined_later(std::ostream & os, S const & s)
@@ -76,7 +76,7 @@ std::ostream & f_friend_defined_later(std::ostream & os, S const & s)
 std::ostream& S::f_missing_body(std::ostream& os, S const& s) { }
 // CHECK-MESSAGES: [[@LINE-1]]:63: warning: function 'f_missing_body' body is not suitable for string display [nyub-deriving-show]
 // CHECK-MESSAGES: [[@LINE-2]]:63: warning: function 'f_missing_body' body should consist of a single return statement [nyub-deriving-show]
-// CHECK-FIXES: std::ostream& S::f_missing_body(std::ostream& os, S const& s) { return os << "{ .i = " << s.i << ", .j = " << s.j << " }" << " }"; }
+// CHECK-FIXES: std::ostream& S::f_missing_body(std::ostream& os, S const& s) { return os << "{ .i = " << s.i << ", .j = " << s.j << " }"; }
 
 struct Qustom {
     const char* toStr() const {
@@ -97,5 +97,5 @@ struct Transformed {
     static std::ostream& f_missing_body(std::ostream& os, Transformed const& t) { }
     // CHECK-MESSAGES: [[@LINE-1]]:81: warning: function 'f_missing_body' body is not suitable for string display [nyub-deriving-show]
     // CHECK-MESSAGES: [[@LINE-2]]:81: warning: function 'f_missing_body' body should consist of a single return statement [nyub-deriving-show]
-    // CHECK-FIXES: static std::ostream& f_missing_body(std::ostream& os, Transformed const& t) { return os << "{ .i = " << t.i << ", .q = " << t.q.toStr() << ", .b = " << "[" << t.b << "]" << " }" << " }"; }
+    // CHECK-FIXES: static std::ostream& f_missing_body(std::ostream& os, Transformed const& t) { return os << "{ .i = " << t.i << ", .q = " << t.q.toStr() << ", .b = " << "[" << t.b << "]" << " }"; }
 };
