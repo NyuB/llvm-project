@@ -185,24 +185,23 @@ bool DerivingShowCheck::isBodyValid(const clang::FunctionDecl *MatchedDecl) {
 
 std::string quoted(std::string s) { return '"' + s + '"'; }
 
-std::optional<std::string> prefixAnnotation(const std::string &annotation) {
-  const std::string suffixAnnotation = "deriving_show::prefix";
-  if (annotation.size() < suffixAnnotation.size() + 2)
+/**
+ * Matches annotation with additional content, e.g.
+ * `deriving_show::prefix<additionalContent>`
+ * - `subAnnotation("deriving_show::prefix",
+ * "deriving_show::prefix<additionalContent>") == "additionalContent"`
+ * - `subAnnotation("deriving_show::prefix",
+ * "deriving_show::oops<additionalContent>") ==
+ * {}`
+ */
+std::optional<std::string> subAnnotation(const std::string &annotationTag,
+                                         const std::string &annotation) {
+  if (annotation.size() < annotationTag.size() + 2)
     return {};
-  if (annotation.rfind(suffixAnnotation, 0) != 0)
+  if (annotation.rfind(annotationTag, 0) != 0)
     return {};
 
-  return annotation.substr(suffixAnnotation.size());
-}
-
-std::optional<std::string> suffixAnnotation(const std::string &annotation) {
-  const std::string suffixAnnotation = "deriving_show::suffix";
-  if (annotation.size() < suffixAnnotation.size() + 2)
-    return {};
-  if (annotation.rfind(suffixAnnotation, 0) != 0)
-    return {};
-
-  return annotation.substr(suffixAnnotation.size());
+  return annotation.substr(annotationTag.size());
 }
 
 std::string fieldRepresentation(const std::string &receiver,
@@ -212,9 +211,11 @@ std::string fieldRepresentation(const std::string &receiver,
     if (attr->getKind() == attr::Kind::Annotate) {
       std::string annotation =
           static_cast<const AnnotateAttr *>(attr)->getAnnotation().str();
-      if (const auto suffix = suffixAnnotation(annotation)) {
+      if (const auto suffix =
+              subAnnotation("deriving_show::suffix", annotation)) {
         repr += suffix.value();
-      } else if (const auto prefix = prefixAnnotation(annotation)) {
+      } else if (const auto prefix =
+                     subAnnotation("deriving_show::prefix", annotation)) {
         repr = prefix.value() + repr;
       }
     }
