@@ -154,10 +154,10 @@ New checks
 - New :doc:`modernize-use-string-view
   <clang-tidy/checks/modernize/use-string-view>` check.
 
-- New :doc:`misc-equalities
-  <clang-tidy/checks/misc/equalities>` check.
+- New :doc:`nyub-deriving-eq
+  <clang-tidy/checks/nyub/deriving-eq>` check.
 
-  FIXME: Write a short description.
+  Find "deriving_eq" annotated methods and check that they implement operator== method as a field by field comparison.
 
 - New :doc:`readability-ambiguous-smartptr-reset-call
   <clang-tidy/checks/readability/ambiguous-smartptr-reset-call>` check.
