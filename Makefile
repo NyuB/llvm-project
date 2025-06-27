@@ -4,10 +4,10 @@ BUILD_DIR=build
 
 # Without clang, none of clang-query and clang-tidy are available
 ENABLED_PROJECTS=clang;clang-tools-extra
-
+RELEASE_WITH_PDB=-DCMAKE_BUILD_TYPE=Release -DLLVM_ENABLE_PDB=ON
 # CMake configure phase. This should be run prior to any other action
 configure:
-	cmake -DCMAKE_CXX_COMPILER=$(CXX_COMPILER) -B $(BUILD_DIR) -DLLVM_ENABLE_PROJECTS=$(ENABLED_PROJECTS) -DCMAKE_BUILD_TYPE=Release -G $(GENERATOR) llvm
+	cmake $(RELEASE_WITH_PDB) -DCMAKE_CXX_COMPILER=$(CXX_COMPILER) -B $(BUILD_DIR) -DLLVM_ENABLE_PROJECTS=$(ENABLED_PROJECTS) -G $(GENERATOR) llvm
 
 # Build clang-tidy and clang-query
 rebuild:
