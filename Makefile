@@ -14,6 +14,7 @@ configure:
 build:
 	cmake --build $(BUILD_DIR) --target clang-tidy
 	cmake --build $(BUILD_DIR) --target clang-query
+	cmake --build $(BUILD_DIR) --target clangd
 
 # List available targets in the current build configuration
 $(BUILD_DIR)/target_list.txt:
