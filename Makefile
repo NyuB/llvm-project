@@ -16,6 +16,9 @@ build:
 	cmake --build $(BUILD_DIR) --target clang-query
 	cmake --build $(BUILD_DIR) --target clangd
 
+build-%:
+	cmake --build $(BUILD_DIR) --target $*
+
 # List available targets in the current build configuration
 $(BUILD_DIR)/target_list.txt:
 	cmake --build $(BUILD_DIR) --target help > $(BUILD_DIR)/target_list.txt
