@@ -9,8 +9,9 @@ RELEASE_WITH_PDB=-DCMAKE_BUILD_TYPE=Release -DLLVM_ENABLE_PDB=ON
 configure:
 	cmake $(RELEASE_WITH_PDB) -DCMAKE_CXX_COMPILER=$(CXX_COMPILER) -B $(BUILD_DIR) -DLLVM_ENABLE_PROJECTS=$(ENABLED_PROJECTS) -G $(GENERATOR) llvm
 
+.PHONY: build
 # Build clang-tidy and clang-query
-rebuild:
+build:
 	cmake --build $(BUILD_DIR) --target clang-tidy
 	cmake --build $(BUILD_DIR) --target clang-query
 
@@ -25,9 +26,9 @@ DEMO_FILE=clang-tools-extra/test/clang-tidy/checkers/nyub/deriving_show.cpp
 CLANG_TIDY=$(BUILD_DIR)/bin/clang-tidy.exe
 CLANG_QUERY=$(BUILD_DIR)/bin/clang-query.exe
 
-demo: rebuild
+demo: build
 	$(CLANG_TIDY) $(CLANG_TIDY_EXTRA_ARGS) $(ONLY_MY_CHECKS) $(DEMO_FILE) --
-demo-fix: rebuild
+demo-fix: build
 	$(CLANG_TIDY) $(CLANG_TIDY_EXTRA_ARGS) $(ONLY_MY_CHECKS) --fix $(DEMO_FILE) --
 ast:
 	clang -Xclang -ast-dump $(DEMO_FILE)
@@ -35,7 +36,7 @@ query:
 	$(CLANG_QUERY) $(DEMO_FILE) --
 
 test: export LIT_FILTER=checkers/nyub/
-test: rebuild
+test: build
 	ninja -C $(BUILD_DIR) check-clang-tools
 
 SOURCES=$(wildcard clang-tools-extra/clang-tidy/nyub/*.cpp)
@@ -48,9 +49,9 @@ CHECKS := $(CHECKS),google-*
 CHECKS := $(CHECKS),-google-readability-braces-around-statements
 CHECKS := $(CHECKS),llvm-*
 CHECKS := $(CHECKS),misc-const-correctness
-tidy: rebuild
+tidy: build
 	$(CLANG_TIDY) -p $(BUILD_DIR) -checks=$(CHECKS) $(SOURCES)
-tidy-fix: rebuild
+tidy-fix: build
 	$(CLANG_TIDY) -fix -p $(BUILD_DIR) -checks=$(CHECKS) $(SOURCES)
 
 # register a new check in the misc module
