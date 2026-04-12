@@ -1,10 +1,12 @@
 // RUN: %check_clang_tidy %s nyub-deriving-show %t
 
-#include <iosfwd>
+// To avoid having to include the entire ostream headers, just declare a no-op operator<< for ostream
+namespace std {
+    class ostream {};
+}
 
-//! To avoid having to include the entire ostream headers, just declare a no-op operator<< for ostream
 template<typename T>
-std::ostream& operator<<(std::ostream &os, T const&) {
+std::ostream& operator<<(std::ostream &os, T) {
     return os;
 }
 
