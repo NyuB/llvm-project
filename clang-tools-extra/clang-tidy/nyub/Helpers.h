@@ -1,12 +1,14 @@
 #ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_NYUB_HELPERS_H
 #define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_NYUB_HELPERS_H
 
-#include "clang/ASTMatchers/ASTMatchFinder.h"
+#include "clang/AST/Expr.h"
+#include "clang/AST/ExprCXX.h"
+#include "clang/AST/TypeBase.h"
 
 namespace clang::tidy::nyub {
-bool isAnnotatedWith(const clang::Decl *decl, const std::string &label);
-QualType dereferencedParamType(QualType paramType);
-const Stmt *unwrap(const Stmt *stmt);
+bool isAnnotatedWith(const clang::Decl *Decl, const std::string &label);
+QualType dereferencedParamType(QualType ParamType);
+const Stmt *unwrap(const Stmt *Stmt);
 /**
  * @brief safe match + cast for a given ast node
  * @note @p stmt is unwrapped first if nested in parenthesis expressions
@@ -14,16 +16,17 @@ const Stmt *unwrap(const Stmt *stmt);
  * class @p AstClassTag
  */
 template <Stmt::StmtClass AstClassTag, typename AstClass>
-const AstClass *getAs(const Stmt *stmt) {
-  if (stmt == nullptr)
+const AstClass *getAs(const Stmt *Stmt) {
+  if (Stmt == nullptr)
     return nullptr;
-  stmt = unwrap(stmt);
-  if (stmt->getStmtClass() != AstClassTag)
+  Stmt = unwrap(Stmt);
+  if (Stmt->getStmtClass() != AstClassTag)
     return nullptr;
-  return static_cast<const AstClass *>(stmt);
+  return static_cast<const AstClass *>(Stmt);
 }
-const BinaryOperator *getAsBinaryOperator(const Stmt *expr);
-const CXXOperatorCallExpr *getAsCXXOperator(const Stmt *expr);
-const ReturnStmt *getBodyAsSingleReturnStmt(const FunctionDecl *decl);
+const BinaryOperator *getAsBinaryOperator(const Stmt *Expr);
+const CXXOperatorCallExpr *getAsCXXOperator(const Stmt *Expr);
+const ReturnStmt *getBodyAsSingleReturnStmt(const FunctionDecl *Decl);
+const Stmt *unNestImplicitCasts(const Stmt *Expr);
 } // namespace clang::tidy::nyub
 #endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_NYUB_HELPERS_H

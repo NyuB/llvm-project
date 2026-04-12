@@ -1,4 +1,5 @@
 #include "Helpers.h"
+#include "clang/AST/Attr.h"
 
 namespace clang::tidy::nyub {
 
@@ -50,4 +51,14 @@ const ReturnStmt *getBodyAsSingleReturnStmt(const FunctionDecl *Decl) {
 
   return RetStmt;
 }
+const Stmt *unNestImplicitCasts(const Stmt *Expr) {
+  if (!Expr)
+    return nullptr;
+  while (const auto *const ImplicitCast =
+             getAs<Stmt::ImplicitCastExprClass, ImplicitCastExpr>(Expr)) {
+    Expr = *ImplicitCast->child_begin();
+  }
+  return Expr;
+}
+
 } // namespace clang::tidy::nyub

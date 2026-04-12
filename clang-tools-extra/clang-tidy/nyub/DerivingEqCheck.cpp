@@ -204,16 +204,6 @@ bool DerivingEqCheck::isReturnTrue(const ReturnStmt *Expr) {
   return ReturnedBool->getValue() == true;
 }
 
-static const Stmt *unNestImplicitCasts(const Stmt *Expr) {
-  if (!Expr)
-    return nullptr;
-  while (const auto *const ImplicitCast =
-             getAs<Stmt::ImplicitCastExprClass, ImplicitCastExpr>(Expr)) {
-    Expr = *ImplicitCast->child_begin();
-  }
-  return Expr;
-}
-
 static bool isFieldBinaryEquality(const FieldDecl *Field,
                                   const BinaryOperator *Binary) {
   if (Binary->getOpcode() != BinaryOperator::Opcode::BO_EQ)
