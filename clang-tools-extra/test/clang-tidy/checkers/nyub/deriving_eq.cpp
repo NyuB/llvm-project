@@ -102,6 +102,19 @@ bool S::f_defined_later(const S& s) const {
 // CHECK-FIXES: bool S::f_defined_later(const S& s) const  { return (i == s.i) && (j == s.j); }
 
 
+
+struct OperatorCall {
+    struct str {
+        bool operator==(str const& other) const { return true; }
+    };
+    str s;
+
+    [[clang::annotate("deriving_eq")]]
+    bool operator==(const OperatorCall &other) const { 
+        return s == other.s;
+    }
+};
+
 struct NonRegression_ImplicitIntCastToInt {
     char c;
 

@@ -8,7 +8,9 @@
 
 #include "DerivingEqCheck.h"
 #include "Helpers.h"
+#include "clang/AST/ExprCXX.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
+#include "clang/Basic/OperatorKinds.h"
 
 using clang::ast_matchers::cxxMethodDecl;
 using clang::ast_matchers::hasAttr;
@@ -200,7 +202,8 @@ unNestImplicitCasts(const ImplicitCastExpr *expr) {
   return expr;
 }
 
-bool isFieldEquality(const FieldDecl *field, const BinaryOperator *binary) {
+static bool isFieldBinaryEquality(const FieldDecl *field,
+                                  const BinaryOperator *binary) {
   if (binary->getOpcode() != BinaryOperator::Opcode::BO_EQ)
     return false;
 
@@ -236,18 +239,52 @@ bool isFieldEquality(const FieldDecl *field, const BinaryOperator *binary) {
   return true;
 }
 
+static bool isFieldOperatorEquality(const FieldDecl *field,
+                                    const CXXOperatorCallExpr *operatorCall) {
+  if (operatorCall->getOperator() != OverloadedOperatorKind::OO_EqualEqual)
+    return false;
+
+  auto children = operatorCall->children().begin();
+  auto lhs = ++children;
+  auto rhs = ++children;
+
+  const auto *leftMember = getAs<Stmt::MemberExprClass, MemberExpr>(*lhs);
+  if (!leftMember)
+    return false;
+  if (!leftMember ||
+      leftMember->child_begin()->getStmtClass() != Stmt::CXXThisExprClass ||
+      leftMember->getMemberDecl()->getNameAsString() !=
+          field->getNameAsString()) {
+    return false;
+  }
+
+  const auto *rightMember = getAs<Stmt::MemberExprClass, MemberExpr>(*rhs);
+  if (!rightMember)
+    return false;
+  if (!rightMember ||
+      rightMember->child_begin()->getStmtClass() != Stmt::DeclRefExprClass ||
+      rightMember->getMemberDecl()->getNameAsString() !=
+          field->getNameAsString()) {
+    return false;
+  }
+
+  return true;
+}
+
+static bool isFieldEquality(const FieldDecl *field, const Stmt *stmt) {
+  if (auto *binary = getAsBinaryOperator(stmt))
+    return isFieldBinaryEquality(field, binary);
+  if (auto *op = getAsCXXOperator(stmt))
+    return isFieldOperatorEquality(field, op);
+  return false;
+}
+
 bool DerivingEqCheck::isReturnEqualityConjonction(
     const clang::CXXMethodDecl *MatchedDecl, const ReturnStmt *expr) {
   if (expr->child_begin() == expr->child_end())
     return false;
-  const auto *binary = getAsBinaryOperator(*expr->child_begin());
-  if (!binary) {
-    diag((*expr->child_begin())->getBeginLoc(),
-         "function %0 returned expression should be a "
-         "boolean conjonction of equalities")
-        << MatchedDecl;
-    return false;
-  }
+
+  const auto *binary = (*expr->child_begin());
 
   std::vector<const FieldDecl *> fields = parentFields(MatchedDecl);
   while (!fields.empty()) {
@@ -256,22 +293,22 @@ bool DerivingEqCheck::isReturnEqualityConjonction(
     if (fields.empty()) {
       return isFieldEquality(field, binary);
     }
-    if (binary->getOpcode() != BinaryOperator::Opcode::BO_LAnd) {
+
+    const auto *binaryAnd = getAsBinaryOperator(binary);
+    if (!binaryAnd ||
+        binaryAnd->getOpcode() != BinaryOperator::Opcode::BO_LAnd) {
+      diag((*expr->child_begin())->getBeginLoc(),
+           "function %0 returned expression should be a "
+           "boolean conjonction of equalities")
+          << MatchedDecl;
       return false;
     }
 
-    const auto *const eq = getAsBinaryOperator(binary->getRHS());
-    if (!eq) {
+    const auto *const eq = binaryAnd->getRHS();
+    if (!isFieldEquality(field, eq))
       return false;
-    }
-    if (!isFieldEquality(field, eq)) {
-      return false;
-    }
 
-    binary = getAsBinaryOperator(binary->getLHS());
-    if (!binary) {
-      return false;
-    }
+    binary = binaryAnd->getLHS();
   }
 
   return true;
