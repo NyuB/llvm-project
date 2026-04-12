@@ -90,9 +90,7 @@ bool DerivingEqCheck::isSignatureValid(
 
     const auto *parentClass = MatchedDecl->getParent();
     const auto parentRecord =
-        MatchedDecl->getASTContext()
-            .getRecordType(parentClass->getTypeForDecl()->getAsCXXRecordDecl())
-            .getCanonicalType();
+        MatchedDecl->getASTContext().getCanonicalTypeDeclType(parentClass);
 
     if (paramRecord.getUnqualifiedType() != parentRecord.getUnqualifiedType()) {
       diag(MatchedDecl->getLocation(),
@@ -271,13 +269,7 @@ bool DerivingEqCheck::isReturnEqualityConjonction(
 
 std::string DerivingEqCheck::makeSignature(const CXXMethodDecl *MatchedDecl) {
   const auto *parent = MatchedDecl->getParent();
-  const auto parentType =
-      MatchedDecl->getASTContext()
-          .getRecordType(parent->getTypeForDecl()->getAsCXXRecordDecl())
-          .getUnqualifiedType()
-          .getBaseTypeIdentifier()
-          ->getName()
-          .str();
+  const auto parentType = parent->getName().str();
   std::string paramName;
   if (MatchedDecl->param_size() != 0) {
     paramName = MatchedDecl->getParamDecl(0)->getNameAsString();
