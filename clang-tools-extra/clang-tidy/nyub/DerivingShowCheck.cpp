@@ -6,13 +6,13 @@ using clang::ast_matchers::hasAttr;
 using clang::ast_matchers::MatchFinder;
 
 namespace clang::tidy::nyub {
-const std::string expectedLeftHandStreamType = "std::ostream";
+const std::string ExpectedLeftHandStreamType = "std::ostream";
 
-bool isMethod(const clang::FunctionDecl *MatchedDecl) {
+static bool isMethod(const clang::FunctionDecl *MatchedDecl) {
   return MatchedDecl->getKind() == Decl::CXXMethod;
 }
 
-bool isMethodDefinitionOutsideClassDeclaration(
+static bool isMethodDefinitionOutsideClassDeclaration(
     const clang::FunctionDecl *MatchedDecl) {
   return isMethod(MatchedDecl) && MatchedDecl->isThisDeclarationADefinition() &&
          (MatchedDecl->getFirstDecl() != MatchedDecl);
@@ -31,13 +31,13 @@ void DerivingShowCheck::check(const MatchFinder::MatchResult &Result) {
   checkBody(MatchedDecl);
 }
 
-SourceRange signatureRange(const clang::FunctionDecl *functionDecl) {
-  if (functionDecl->isThisDeclarationADefinition()) {
-    auto body = functionDecl->getBody()->getBeginLoc();
+static SourceRange signatureRange(const clang::FunctionDecl *FunctionDecl) {
+  if (FunctionDecl->isThisDeclarationADefinition()) {
+    auto Body = FunctionDecl->getBody()->getBeginLoc();
     // Keep leading '{'
-    return SourceRange(functionDecl->getBeginLoc(), body.getLocWithOffset(-1));
+    return SourceRange(FunctionDecl->getBeginLoc(), Body.getLocWithOffset(-1));
   }
-  return functionDecl->getSourceRange();
+  return FunctionDecl->getSourceRange();
 }
 
 void DerivingShowCheck::checkSignature(const clang::FunctionDecl *MatchedDecl) {
@@ -52,16 +52,16 @@ void DerivingShowCheck::checkSignature(const clang::FunctionDecl *MatchedDecl) {
 
 bool DerivingShowCheck::isSignatureValid(
     const clang::FunctionDecl *MatchedDecl) {
-  bool result = true;
+  bool Result = true;
 
-  auto returnType =
+  auto ReturnType =
       dereferencedParamType(MatchedDecl->getReturnType().getUnqualifiedType());
-  if (returnType.getAsString() != expectedLeftHandStreamType) {
+  if (ReturnType.getAsString() != ExpectedLeftHandStreamType) {
     diag(MatchedDecl->getLocation(),
          "function %0 should return %1 instead of %2")
-        << MatchedDecl << expectedLeftHandStreamType
-        << returnType.getAsString();
-    result = false;
+        << MatchedDecl << ExpectedLeftHandStreamType
+        << ReturnType.getAsString();
+    Result = false;
   }
 
   if (isMethod(MatchedDecl) &&
@@ -69,7 +69,7 @@ bool DerivingShowCheck::isSignatureValid(
       !MatchedDecl->isStatic()) {
     diag(MatchedDecl->getLocation(), "function %0 should be static")
         << MatchedDecl;
-    result = false;
+    Result = false;
   }
 
   if (MatchedDecl->param_size() != 2) {
@@ -79,81 +79,80 @@ bool DerivingShowCheck::isSignatureValid(
                   // non-parameter checks above
   }
 
-  auto *const ostreamParameter = MatchedDecl->parameters()[0];
-  auto *const thisParameter = MatchedDecl->parameters()[1];
+  auto *const OStreamParameter = MatchedDecl->parameters()[0];
+  auto *const ThisParameter = MatchedDecl->parameters()[1];
 
-  auto ostreamParameterType = ostreamParameter->getType();
-  if (!ostreamParameterType->isLValueReferenceType()) {
-    diag(ostreamParameter->getLocation(),
+  auto OStreamParameterType = OStreamParameter->getType();
+  if (!OStreamParameterType->isLValueReferenceType()) {
+    diag(OStreamParameter->getLocation(),
          "parameter %0 should be passed by reference")
-        << ostreamParameter;
-    result = false;
+        << OStreamParameter;
+    Result = false;
   }
 
-  ostreamParameterType = dereferencedParamType(ostreamParameterType);
+  OStreamParameterType = dereferencedParamType(OStreamParameterType);
 
-  if (ostreamParameterType.getUnqualifiedType().getAsString() !=
-      expectedLeftHandStreamType) {
-    diag(ostreamParameter->getLocation(),
+  if (OStreamParameterType.getUnqualifiedType().getAsString() !=
+      ExpectedLeftHandStreamType) {
+    diag(OStreamParameter->getLocation(),
          "parameter %0 should be of type std::ostream but is %1")
-        << ostreamParameter << ostreamParameterType;
-    result = false;
+        << OStreamParameter << OStreamParameterType;
+    Result = false;
   }
 
-  return result;
+  return Result;
 }
 
-char lowerCase(char c) {
-  if (c >= 'A' && c <= 'Z') {
-    return 'a' + (c - 'A');
-  }
-  return c;
+static char lowerCase(char Chr) {
+  if (Chr >= 'A' && Chr <= 'Z')
+    return 'a' + (Chr - 'A');
+  return Chr;
 }
 
-void uncapitalize(std::string *s) {
-  if (s->empty())
+static void uncapitalize(std::string *Str) {
+  if (Str->empty())
     return;
-  s->at(0) = lowerCase(s->at(0));
+  Str->at(0) = lowerCase(Str->at(0));
 }
 
 std::string
 DerivingShowCheck::makeSignature(const clang::FunctionDecl *MatchedDecl) {
-  std::string paramName = "_this";
-  std::string paramType = "T";
-  const std::string staticPrefix =
+  std::string ParamName = "_this";
+  std::string ParamType = "T";
+  const std::string StaticPrefix =
       (isMethod(MatchedDecl) && !MatchedDecl->isThisDeclarationADefinition())
           ? "static "
           : "";
 
   if (MatchedDecl->param_size() > 1) {
-    paramName = MatchedDecl->parameters()[1]->getNameAsString();
-    paramType = dereferencedParamType(MatchedDecl->parameters()[1]->getType())
+    ParamName = MatchedDecl->parameters()[1]->getNameAsString();
+    ParamType = dereferencedParamType(MatchedDecl->parameters()[1]->getType())
                     .getUnqualifiedType()
                     .getAsString();
   } else if (isMethod(MatchedDecl)) {
-    const auto *const methodDecl =
+    const auto *const MethodDecl =
         static_cast<const CXXMethodDecl *>(MatchedDecl);
-    paramType = methodDecl->getParent()->getNameAsString();
-    paramName = paramType;
-    uncapitalize(&paramName);
+    ParamType = MethodDecl->getParent()->getNameAsString();
+    ParamName = ParamType;
+    uncapitalize(&ParamName);
   }
-  const std::string typePrefix =
-      isMethodDefinitionOutsideClassDeclaration(MatchedDecl) ? paramType + "::"
+  const std::string TypePrefix =
+      isMethodDefinitionOutsideClassDeclaration(MatchedDecl) ? ParamType + "::"
                                                              : "";
 
-  return staticPrefix + "std::ostream& " + typePrefix +
-         MatchedDecl->getNameAsString() + "(std::ostream& os, " + paramType +
-         " const& " + paramName + ")";
+  return StaticPrefix + "std::ostream& " + TypePrefix +
+         MatchedDecl->getNameAsString() + "(std::ostream& os, " + ParamType +
+         " const& " + ParamName + ")";
 }
 
 void DerivingShowCheck::checkBody(const clang::FunctionDecl *MatchedDecl) {
   if (isBodyValid(MatchedDecl))
     return;
-  const auto bodyRange = MatchedDecl->getBody()->getSourceRange();
-  diag(bodyRange.getBegin(),
+  const auto BodyRange = MatchedDecl->getBody()->getSourceRange();
+  diag(BodyRange.getBegin(),
        "function %0 body is not suitable for string display")
       << MatchedDecl
-      << FixItHint::CreateReplacement(bodyRange, makeBody(MatchedDecl));
+      << FixItHint::CreateReplacement(BodyRange, makeBody(MatchedDecl));
 }
 
 bool DerivingShowCheck::isBodyValid(const clang::FunctionDecl *MatchedDecl) {
@@ -161,17 +160,17 @@ bool DerivingShowCheck::isBodyValid(const clang::FunctionDecl *MatchedDecl) {
   if (!MatchedDecl->isThisDeclarationADefinition() || !MatchedDecl->getBody())
     return true; // Just a declaration
 
-  const auto *const returnStmt = getBodyAsSingleReturnStmt(MatchedDecl);
-  if (!returnStmt) {
+  const auto *const ReturnStmt = getBodyAsSingleReturnStmt(MatchedDecl);
+  if (!ReturnStmt) {
     diag(MatchedDecl->getBody()->getBeginLoc(),
          "function %0 body should consist of a single "
          "return statement")
         << MatchedDecl;
     return false;
   }
-  const auto *const returnedExpr = getAsCXXOperator(returnStmt->getRetValue());
-  if (!returnedExpr ||
-      returnedExpr->getOperator() != OverloadedOperatorKind::OO_LessLess) {
+  const auto *const ReturnedExpr = getAsCXXOperator(ReturnStmt->getRetValue());
+  if (!ReturnedExpr ||
+      ReturnedExpr->getOperator() != OverloadedOperatorKind::OO_LessLess) {
     diag(MatchedDecl->getBody()->getBeginLoc(),
          "function %0 body should consist of a single "
          "return statement chaining << operators")
@@ -181,7 +180,7 @@ bool DerivingShowCheck::isBodyValid(const clang::FunctionDecl *MatchedDecl) {
   return true;
 }
 
-std::string quoted(std::string s) { return '"' + s + '"'; }
+static std::string quoted(const std::string &Str) { return '"' + Str + '"'; }
 
 /**
  * Matches annotation with additional content, e.g.
@@ -192,67 +191,69 @@ std::string quoted(std::string s) { return '"' + s + '"'; }
  * "deriving_show::oops<additionalContent>") ==
  * {}`
  */
-std::optional<std::string> subAnnotation(const std::string &annotationTag,
-                                         const std::string &annotation) {
-  if (annotation.size() < annotationTag.size() + 2)
+static std::optional<std::string>
+subAnnotation(const std::string &AnnotationTag, const std::string &Annotation) {
+  if (Annotation.size() < AnnotationTag.size() + 2)
     return {};
-  if (annotation.rfind(annotationTag, 0) != 0)
+  if (Annotation.rfind(AnnotationTag, 0) != 0)
     return {};
 
-  return annotation.substr(annotationTag.size());
+  return Annotation.substr(AnnotationTag.size());
 }
 
-std::string fieldRepresentation(const std::string &receiver,
-                                const FieldDecl *field) {
-  std::string repr = receiver + "." + field->getNameAsString();
-  for (auto *const attr : field->attrs()) {
-    if (attr->getKind() == attr::Kind::Annotate) {
-      const std::string annotation =
-          static_cast<const AnnotateAttr *>(attr)->getAnnotation().str();
-      if (const auto suffix =
-              subAnnotation("deriving_show::suffix", annotation)) {
-        repr += suffix.value();
-      } else if (const auto prefix =
-                     subAnnotation("deriving_show::prefix", annotation)) {
-        repr = prefix.value() + repr;
+static std::string fieldRepresentation(const std::string &Receiver,
+                                       const FieldDecl *Field) {
+  std::string Repr = Receiver + "." + Field->getNameAsString();
+  std::string Prefix;
+  std::string Suffix;
+  for (auto *const Attr : Field->attrs()) {
+    if (Attr->getKind() == attr::Kind::Annotate) {
+      const std::string Annotation =
+          static_cast<const AnnotateAttr *>(Attr)->getAnnotation().str();
+      if (const auto SuffixOpt =
+              subAnnotation("deriving_show::suffix", Annotation)) {
+        Suffix = *SuffixOpt;
+      } else if (const auto PrefixOpt =
+                     subAnnotation("deriving_show::prefix", Annotation)) {
+        Prefix = *PrefixOpt;
       }
     }
   }
-  return repr;
+  return Prefix + Repr + Suffix;
 }
 
 std::string
 DerivingShowCheck::makeBody(const clang::FunctionDecl *MatchedDecl) {
   if (MatchedDecl->param_size() != 2)
     return "{ /* TODO */ }";
-  auto *const firstParam = MatchedDecl->parameters()[0];
-  auto *const secondParam = MatchedDecl->parameters()[1];
-  const auto *const printedType = dereferencedParamType(secondParam->getType())
+  auto *const FirstParam = MatchedDecl->parameters()[0];
+  auto *const SecondParam = MatchedDecl->parameters()[1];
+  const auto *const PrintedType = dereferencedParamType(SecondParam->getType())
                                       ->getUnqualifiedDesugaredType();
-  std::string body = "";
-  if (printedType->isRecordType()) {
-    auto *const record = printedType->getAsCXXRecordDecl();
-    bool first = true;
-    for (auto *const field : record->fields()) {
-      body += " << ";
-      if (!first) {
-        body += quoted(", ." + field->getNameAsString() + " = ");
+  std::string Body;
+  if (PrintedType->isRecordType()) {
+    auto *const Record = PrintedType->getAsCXXRecordDecl();
+    bool First = true;
+    for (auto *const Field : Record->fields()) {
+      Body += " << ";
+      if (!First) {
+        Body += quoted(", ." + Field->getNameAsString() + " = ");
       } else {
-        body += quoted("{ ." + field->getNameAsString() + " = ");
-        first = false;
+        Body += quoted("{ ." + Field->getNameAsString() + " = ");
+        First = false;
       }
-      body += " << ";
-      body += fieldRepresentation(secondParam->getNameAsString(), field);
+      Body += " << ";
+      Body += fieldRepresentation(SecondParam->getNameAsString(), Field);
     }
-    body += " << " + quoted(" }");
+    Body += " << " + quoted(" }");
 
   } else {
-    body += " << " + secondParam->getNameAsString();
+    Body += " << " + SecondParam->getNameAsString();
   }
 
-  const std::string prefix = "{ return " + firstParam->getNameAsString();
-  const std::string suffix = "; }";
-  return prefix + body + suffix;
+  const std::string Prefix = "{ return " + FirstParam->getNameAsString();
+  const std::string Suffix = "; }";
+  return Prefix + Body + Suffix;
 }
 
 } // namespace clang::tidy::nyub

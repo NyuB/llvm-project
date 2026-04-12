@@ -10,7 +10,6 @@
 #define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_NYUB_DERIVINGEQCHECK_H
 
 #include "../ClangTidyCheck.h"
-#include <vector>
 
 namespace clang::tidy::nyub {
 
@@ -49,13 +48,10 @@ private:
   bool isBodyValid(const clang::CXXMethodDecl *MatchedDecl);
   static std::string makeBody(const clang::CXXMethodDecl *MatchedDecl);
 
-  bool isReturnTrue(const ReturnStmt *expr);
+  bool isReturnTrue(const ReturnStmt *Expr);
   bool isReturnEqualityConjonction(const clang::CXXMethodDecl *MatchedDecl,
-                                   const ReturnStmt *expr);
+                                   const ReturnStmt *Expr);
 };
-
-std::vector<const FieldDecl *>
-parentFields(const clang::CXXMethodDecl *MatchedDecl);
 
 } // namespace clang::tidy::nyub
 

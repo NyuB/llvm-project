@@ -2,56 +2,52 @@
 
 namespace clang::tidy::nyub {
 
-const Stmt *unwrap(const Stmt *stmt) {
-  while (stmt->getStmtClass() == Stmt::ParenExprClass) {
-    stmt = *stmt->child_begin();
-  }
-  return stmt;
+const Stmt *unwrap(const Stmt *Stmt) {
+  while (Stmt->getStmtClass() == Stmt::ParenExprClass)
+    Stmt = *Stmt->child_begin();
+  return Stmt;
 }
 
-bool isAnnotatedWith(const clang::Decl *decl, const std::string &label) {
-
-  const auto attrs = decl->getAttrs();
-  return std::find_if(attrs.begin(), attrs.end(), [&](const Attr *attr) {
-           return attr->getKind() == attr::Kind::Annotate &&
-                  static_cast<const AnnotateAttr *>(attr)->getAnnotation() ==
-                      label;
-         }) != attrs.end();
+bool isAnnotatedWith(const clang::Decl *Decl, const std::string &Label) {
+  const auto &Attrs = Decl->getAttrs();
+  return std::find_if(Attrs.begin(), Attrs.end(), [&](const Attr *Attr) {
+           return Attr->getKind() == attr::Kind::Annotate &&
+                  static_cast<const AnnotateAttr *>(Attr)->getAnnotation() ==
+                      Label;
+         }) != Attrs.end();
 }
 
-QualType dereferencedParamType(QualType paramType) {
-  while (paramType->isPointerOrReferenceType()) {
-    if (paramType->isPointerType())
-      paramType = paramType->getAs<PointerType>()->getPointeeType();
+QualType dereferencedParamType(QualType ParamType) {
+  while (ParamType->isPointerOrReferenceType())
+    if (ParamType->isPointerType())
+      ParamType = ParamType->getAs<PointerType>()->getPointeeType();
     else
-      paramType = paramType->getAs<ReferenceType>()->getPointeeType();
-  }
-  return paramType;
+      ParamType = ParamType->getAs<ReferenceType>()->getPointeeType();
+  return ParamType;
 }
 
-const BinaryOperator *getAsBinaryOperator(const Stmt *expr) {
-  return getAs<Stmt::BinaryOperatorClass, BinaryOperator>(expr);
+const BinaryOperator *getAsBinaryOperator(const Stmt *Expr) {
+  return getAs<Stmt::BinaryOperatorClass, BinaryOperator>(Expr);
 }
 
-const CXXOperatorCallExpr *getAsCXXOperator(const Stmt *expr) {
-  return getAs<Stmt::CXXOperatorCallExprClass, CXXOperatorCallExpr>(expr);
+const CXXOperatorCallExpr *getAsCXXOperator(const Stmt *Expr) {
+  return getAs<Stmt::CXXOperatorCallExprClass, CXXOperatorCallExpr>(Expr);
 }
 
-const ReturnStmt *getBodyAsSingleReturnStmt(const FunctionDecl *decl) {
-  auto *const body = decl->getBody();
-  if (!body || body->children().empty())
+const ReturnStmt *getBodyAsSingleReturnStmt(const FunctionDecl *Decl) {
+  auto *const Body = Decl->getBody();
+  if (!Body || Body->children().empty())
     return nullptr;
-  auto first = body->child_begin();
-  if (first->getStmtClass() != Stmt::ReturnStmtClass)
-    return nullptr;
-
-  const auto *const returnStmt =
-      getAs<Stmt::ReturnStmtClass, ReturnStmt>(*first);
-
-  first++;
-  if (first != body->child_end())
+  auto First = Body->child_begin();
+  if (First->getStmtClass() != Stmt::ReturnStmtClass)
     return nullptr;
 
-  return returnStmt;
+  const auto *const RetStmt = getAs<Stmt::ReturnStmtClass, ReturnStmt>(*First);
+
+  First++;
+  if (First != Body->child_end())
+    return nullptr;
+
+  return RetStmt;
 }
 } // namespace clang::tidy::nyub

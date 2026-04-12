@@ -12,6 +12,8 @@
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Basic/OperatorKinds.h"
 
+#include <utility>
+
 using clang::ast_matchers::cxxMethodDecl;
 using clang::ast_matchers::hasAttr;
 using clang::ast_matchers::MatchFinder;
@@ -33,19 +35,19 @@ void DerivingEqCheck::check(const MatchFinder::MatchResult &Result) {
 
 void DerivingEqCheck::signatureCheck(const clang::CXXMethodDecl *MatchedDecl) {
   if (!isSignatureValid(MatchedDecl)) {
-    SourceRange signatureToReplace;
+    SourceRange SignatureToReplace;
     if (MatchedDecl->isThisDeclarationADefinition()) {
-      auto body = MatchedDecl->getBody()->getBeginLoc();
+      auto Body = MatchedDecl->getBody()->getBeginLoc();
       // Keep leading '{'
-      signatureToReplace =
-          SourceRange(MatchedDecl->getBeginLoc(), body.getLocWithOffset(-1));
+      SignatureToReplace =
+          SourceRange(MatchedDecl->getBeginLoc(), Body.getLocWithOffset(-1));
     } else {
-      signatureToReplace = MatchedDecl->getSourceRange();
+      SignatureToReplace = MatchedDecl->getSourceRange();
     }
     diag(MatchedDecl->getLocation(),
          "function %0 signature is not suitable for an equality operator")
         << MatchedDecl
-        << FixItHint::CreateReplacement(SourceRange(signatureToReplace),
+        << FixItHint::CreateReplacement(SourceRange(SignatureToReplace),
                                         makeSignature(MatchedDecl));
   }
 }
@@ -63,269 +65,276 @@ void DerivingEqCheck::bodyCheck(const clang::CXXMethodDecl *MatchedDecl) {
 
 bool DerivingEqCheck::isSignatureValid(
     const clang::CXXMethodDecl *MatchedDecl) {
-  bool result = true;
+  bool Result = true;
   if (MatchedDecl->param_size() != 1) {
     diag(MatchedDecl->getLocation(),
          "function %0 should have a single argument")
         << MatchedDecl;
-    result = false;
+    Result = false;
   } else {
-    const ParmVarDecl *param = MatchedDecl->getParamDecl(0);
-    const QualType paramType = param->getType();
+    const ParmVarDecl *Param = MatchedDecl->getParamDecl(0);
+    const QualType ParamType = Param->getType();
 
-    if (!paramType->isLValueReferenceType()) {
-      diag(param->getLocation(), "parameter %0 should be passed by reference")
-          << param;
-      result = false;
+    if (!ParamType->isLValueReferenceType()) {
+      diag(Param->getLocation(), "parameter %0 should be passed by reference")
+          << Param;
+      Result = false;
     }
 
-    const QualType paramRecord =
-        dereferencedParamType(paramType).getCanonicalType();
+    const QualType ParamRecord =
+        dereferencedParamType(ParamType).getCanonicalType();
 
-    if (!paramRecord.isConstQualified()) {
-      diag(param->getLocation(), "parameter %0 should be const qualified")
-          << param;
-      result = false;
+    if (!ParamRecord.isConstQualified()) {
+      diag(Param->getLocation(), "parameter %0 should be const qualified")
+          << Param;
+      Result = false;
     }
 
-    const auto *parentClass = MatchedDecl->getParent();
-    const auto parentRecord =
-        MatchedDecl->getASTContext().getCanonicalTypeDeclType(parentClass);
+    const auto *ParentClass = MatchedDecl->getParent();
+    const auto ParentRecord =
+        MatchedDecl->getASTContext().getCanonicalTypeDeclType(ParentClass);
 
-    if (paramRecord.getUnqualifiedType() != parentRecord.getUnqualifiedType()) {
+    if (ParamRecord.getUnqualifiedType() != ParentRecord.getUnqualifiedType()) {
       diag(MatchedDecl->getLocation(),
            "function %0 has invalid argument type %1 for equality with %2")
-          << MatchedDecl << paramRecord.getUnqualifiedType()
-          << parentRecord.getUnqualifiedType();
-      result = false;
+          << MatchedDecl << ParamRecord.getUnqualifiedType()
+          << ParentRecord.getUnqualifiedType();
+      Result = false;
     }
   }
 
   if (!MatchedDecl->getReturnType()->isBooleanType()) {
     diag(MatchedDecl->getLocation(), "function %0 has non boolean return type")
         << MatchedDecl;
-    result = false;
+    Result = false;
   }
 
   if (!MatchedDecl->isConst()) {
     diag(MatchedDecl->getLocation(), "function %0 should be const")
         << MatchedDecl;
-    result = false;
+    Result = false;
   }
 
-  return result;
+  return Result;
 }
 
-bool isSingleReturnStmt(const Stmt *body) {
-  auto first = body->child_begin();
-  if (first->getStmtClass() != Stmt::ReturnStmtClass)
+static bool isSingleReturnStmt(const Stmt *Body) {
+  auto First = Body->child_begin();
+  if (First->getStmtClass() != Stmt::ReturnStmtClass)
     return false;
-  first++;
-  if (first != body->child_end())
+  First++;
+  if (First != Body->child_end())
     return false;
   return true;
 }
 
 bool DerivingEqCheck::isBodyValid(const clang::CXXMethodDecl *MatchedDecl) {
-  auto *const body = MatchedDecl->getBody();
-  if (!body) {
+  auto *const Body = MatchedDecl->getBody();
+  if (!Body) {
     // Just a declaration
     return true;
   }
-  if (body->children().empty()) {
-    diag(body->getBeginLoc(),
+  if (Body->children().empty()) {
+    diag(Body->getBeginLoc(),
          "function %0 has empty body but should return a boolean value")
         << MatchedDecl;
     return false;
   }
-  if (!isSingleReturnStmt(body)) {
-    diag(body->getBeginLoc(),
+  if (!isSingleReturnStmt(Body)) {
+    diag(Body->getBeginLoc(),
          "function %0 should consist of a single return statement")
         << MatchedDecl;
     return false;
   }
-  const ReturnStmt *returnStmt =
+  const ReturnStmt *RetStmt =
       static_cast<ReturnStmt *>(*MatchedDecl->getBody()->children().begin());
 
   if (MatchedDecl->getParent()->field_empty())
-    return isReturnTrue(returnStmt);
-  return isReturnEqualityConjonction(MatchedDecl, returnStmt);
+    return isReturnTrue(RetStmt);
+  return isReturnEqualityConjonction(MatchedDecl, RetStmt);
+}
+
+std::vector<const FieldDecl *> static parentFields(
+    const clang::CXXMethodDecl *MatchedDecl) {
+  std::vector<const FieldDecl *> Fields;
+  for (const auto *Field : MatchedDecl->getParent()->fields()) {
+    if (isAnnotatedWith(Field, "deriving_eq::ignore"))
+      continue;
+    Fields.push_back(Field);
+  }
+  return Fields;
 }
 
 std::string DerivingEqCheck::makeBody(const CXXMethodDecl *MatchedDecl) {
-  const auto fields = parentFields(MatchedDecl);
-  if (fields.empty())
+  const auto Fields = parentFields(MatchedDecl);
+  if (Fields.empty())
     return "{ return true; }";
-  std::string paramName;
+  std::string ParamName;
   if (MatchedDecl->param_size() != 0) {
-    paramName = MatchedDecl->getParamDecl(0)->getNameAsString();
+    ParamName = MatchedDecl->getParamDecl(0)->getNameAsString();
   } else {
-    paramName = "other";
+    ParamName = "other";
   }
-  std::string result = " { return ";
-  bool noFieldAddedYet = true;
-  for (const auto *field : fields) {
-    const auto name = field->getNameAsString();
-    if (!noFieldAddedYet) {
-      result += " && ";
-    }
-    result += "(";
-    result += name;
-    result += " == ";
-    result += paramName;
-    result += ".";
-    result += name;
-    result += ")";
-    noFieldAddedYet = false;
+  std::string Result = " { return ";
+  bool NoFieldAddedYet = true;
+  for (const auto *Field : Fields) {
+    const auto Name = Field->getNameAsString();
+    if (!NoFieldAddedYet)
+      Result += " && ";
+    Result += "(";
+    Result += Name;
+    Result += " == ";
+    Result += ParamName;
+    Result += ".";
+    Result += Name;
+    Result += ")";
+    NoFieldAddedYet = false;
   }
-  result += "; }";
+  Result += "; }";
 
-  return result;
+  return Result;
 }
 
-bool DerivingEqCheck::isReturnTrue(const ReturnStmt *expr) {
-  const auto *const returned = *expr->child_begin();
-  if (returned->getStmtClass() != Stmt::CXXBoolLiteralExprClass)
+bool DerivingEqCheck::isReturnTrue(const ReturnStmt *Expr) {
+  const auto *const Returned = *Expr->child_begin();
+  if (Returned->getStmtClass() != Stmt::CXXBoolLiteralExprClass)
     return false;
-  const auto *const returnedBool =
-      static_cast<const CXXBoolLiteralExpr *>(returned);
-  return returnedBool->getValue() == true;
+  const auto *const ReturnedBool =
+      static_cast<const CXXBoolLiteralExpr *>(Returned);
+  return ReturnedBool->getValue() == true;
 }
 
-static const Stmt *unNestImplicitCasts(const Stmt *expr) {
-  if (!expr)
+static const Stmt *unNestImplicitCasts(const Stmt *Expr) {
+  if (!Expr)
     return nullptr;
-  while (const auto *const implicitCast =
-             getAs<Stmt::ImplicitCastExprClass, ImplicitCastExpr>(expr)) {
-    expr = *implicitCast->child_begin();
+  while (const auto *const ImplicitCast =
+             getAs<Stmt::ImplicitCastExprClass, ImplicitCastExpr>(Expr)) {
+    Expr = *ImplicitCast->child_begin();
   }
-  return expr;
+  return Expr;
 }
 
-static bool isFieldBinaryEquality(const FieldDecl *field,
-                                  const BinaryOperator *binary) {
-  if (binary->getOpcode() != BinaryOperator::Opcode::BO_EQ)
+static bool isFieldBinaryEquality(const FieldDecl *Field,
+                                  const BinaryOperator *Binary) {
+  if (Binary->getOpcode() != BinaryOperator::Opcode::BO_EQ)
     return false;
 
-  const auto *lhs = unNestImplicitCasts(binary->getLHS());
-  const auto *const leftMember = getAs<Stmt::MemberExprClass, MemberExpr>(lhs);
-  if (!leftMember ||
-      leftMember->child_begin()->getStmtClass() != Stmt::CXXThisExprClass ||
-      leftMember->getMemberDecl()->getNameAsString() !=
-          field->getNameAsString()) {
-
+  const auto *LHS = unNestImplicitCasts(Binary->getLHS());
+  const auto *const LeftMember = getAs<Stmt::MemberExprClass, MemberExpr>(LHS);
+  if (!LeftMember ||
+      LeftMember->child_begin()->getStmtClass() != Stmt::CXXThisExprClass ||
+      LeftMember->getMemberDecl()->getNameAsString() !=
+          Field->getNameAsString()) {
     return false;
   }
 
-  const auto *rhs = unNestImplicitCasts(binary->getRHS());
-  const auto *const rightMember = getAs<Stmt::MemberExprClass, MemberExpr>(rhs);
-  if (!rightMember ||
-      rightMember->child_begin()->getStmtClass() != Stmt::DeclRefExprClass ||
-      rightMember->getMemberDecl()->getNameAsString() !=
-          field->getNameAsString()) {
+  const auto *RHS = unNestImplicitCasts(Binary->getRHS());
+  const auto *const RightMember = getAs<Stmt::MemberExprClass, MemberExpr>(RHS);
+  if (!RightMember ||
+      RightMember->child_begin()->getStmtClass() != Stmt::DeclRefExprClass ||
+      RightMember->getMemberDecl()->getNameAsString() !=
+          Field->getNameAsString()) {
     return false;
   }
 
   return true;
 }
 
-static bool isFieldOperatorEquality(const FieldDecl *field,
-                                    const CXXOperatorCallExpr *operatorCall) {
-  if (operatorCall->getOperator() != OverloadedOperatorKind::OO_EqualEqual)
+static std::pair<const Stmt *, const Stmt *>
+cxxOperatorEqEqSides(const CXXOperatorCallExpr *OperatorCall) {
+  assert(operatorCall->getOperator() == OverloadedOperatorKind::OO_EqualEqual);
+  // CXXOperatorCall
+  // |-- FunctionPtr
+  // |-- LHS
+  // |-- RHS
+  auto ChildrenIterator = OperatorCall->children().begin();
+  auto LHS = ++ChildrenIterator;
+  auto RHS = ++ChildrenIterator;
+  return {*LHS, *RHS};
+}
+
+static bool isFieldOperatorEquality(const FieldDecl *Field,
+                                    const CXXOperatorCallExpr *OperatorCall) {
+  if (OperatorCall->getOperator() != OverloadedOperatorKind::OO_EqualEqual)
     return false;
 
-  auto childrenIterator = operatorCall->children().begin();
-  auto lhs = ++childrenIterator;
-  auto rhs = ++childrenIterator;
+  auto [LHS, RHS] = cxxOperatorEqEqSides(OperatorCall);
 
-  const auto *leftMember = getAs<Stmt::MemberExprClass, MemberExpr>(*lhs);
-  if (!leftMember)
+  const auto *LeftMember = getAs<Stmt::MemberExprClass, MemberExpr>(LHS);
+  if (!LeftMember)
     return false;
-  if (!leftMember ||
-      leftMember->child_begin()->getStmtClass() != Stmt::CXXThisExprClass ||
-      leftMember->getMemberDecl()->getNameAsString() !=
-          field->getNameAsString()) {
+  if (!LeftMember ||
+      LeftMember->child_begin()->getStmtClass() != Stmt::CXXThisExprClass ||
+      LeftMember->getMemberDecl()->getNameAsString() !=
+          Field->getNameAsString()) {
     return false;
   }
 
-  const auto *rightMember = getAs<Stmt::MemberExprClass, MemberExpr>(*rhs);
-  if (!rightMember)
+  const auto *RightMember = getAs<Stmt::MemberExprClass, MemberExpr>(RHS);
+  if (!RightMember)
     return false;
-  if (!rightMember ||
-      rightMember->child_begin()->getStmtClass() != Stmt::DeclRefExprClass ||
-      rightMember->getMemberDecl()->getNameAsString() !=
-          field->getNameAsString()) {
+  if (!RightMember ||
+      RightMember->child_begin()->getStmtClass() != Stmt::DeclRefExprClass ||
+      RightMember->getMemberDecl()->getNameAsString() !=
+          Field->getNameAsString()) {
     return false;
   }
 
   return true;
 }
 
-static bool isFieldEquality(const FieldDecl *field, const Stmt *stmt) {
-  if (auto *binary = getAsBinaryOperator(stmt))
-    return isFieldBinaryEquality(field, binary);
-  if (auto *op = getAsCXXOperator(stmt))
-    return isFieldOperatorEquality(field, op);
+static bool isFieldEquality(const FieldDecl *Field, const Stmt *Stmt) {
+  if (auto *Binary = getAsBinaryOperator(Stmt))
+    return isFieldBinaryEquality(Field, Binary);
+  if (auto *Op = getAsCXXOperator(Stmt))
+    return isFieldOperatorEquality(Field, Op);
   return false;
 }
 
 bool DerivingEqCheck::isReturnEqualityConjonction(
-    const clang::CXXMethodDecl *MatchedDecl, const ReturnStmt *expr) {
-  if (expr->child_begin() == expr->child_end())
+    const clang::CXXMethodDecl *MatchedDecl, const ReturnStmt *Expr) {
+  if (Expr->child_begin() == Expr->child_end())
     return false;
 
-  const auto *binary = (*expr->child_begin());
+  const auto *Binary = (*Expr->child_begin());
 
-  std::vector<const FieldDecl *> fields = parentFields(MatchedDecl);
-  while (!fields.empty()) {
-    const auto *const field = fields.back();
-    fields.pop_back();
-    if (fields.empty()) {
-      return isFieldEquality(field, binary);
-    }
+  std::vector<const FieldDecl *> Fields = parentFields(MatchedDecl);
+  while (!Fields.empty()) {
+    const auto *const Field = Fields.back();
+    Fields.pop_back();
+    if (Fields.empty())
+      return isFieldEquality(Field, Binary);
 
-    const auto *binaryAnd = getAsBinaryOperator(binary);
-    if (!binaryAnd ||
-        binaryAnd->getOpcode() != BinaryOperator::Opcode::BO_LAnd) {
-      diag((*expr->child_begin())->getBeginLoc(),
+    const auto *BinaryAnd = getAsBinaryOperator(Binary);
+    if (!BinaryAnd ||
+        BinaryAnd->getOpcode() != BinaryOperator::Opcode::BO_LAnd) {
+      diag((*Expr->child_begin())->getBeginLoc(),
            "function %0 returned expression should be a "
            "boolean conjonction of equalities")
           << MatchedDecl;
       return false;
     }
 
-    const auto *const eq = binaryAnd->getRHS();
-    if (!isFieldEquality(field, eq))
+    const auto *const Eq = BinaryAnd->getRHS();
+    if (!isFieldEquality(Field, Eq))
       return false;
 
-    binary = binaryAnd->getLHS();
+    Binary = BinaryAnd->getLHS();
   }
 
   return true;
 }
 
 std::string DerivingEqCheck::makeSignature(const CXXMethodDecl *MatchedDecl) {
-  const auto *parent = MatchedDecl->getParent();
-  const auto parentType = parent->getName().str();
-  std::string paramName;
+  const auto *Parent = MatchedDecl->getParent();
+  const auto ParentType = Parent->getName().str();
+  std::string ParamName;
   if (MatchedDecl->param_size() != 0) {
-    paramName = MatchedDecl->getParamDecl(0)->getNameAsString();
+    ParamName = MatchedDecl->getParamDecl(0)->getNameAsString();
   } else {
-    paramName = "other";
+    ParamName = "other";
   }
-  return "bool " + MatchedDecl->getNameAsString() + "(" + parentType +
-         " const& " + paramName + ") const";
+  return "bool " + MatchedDecl->getNameAsString() + "(" + ParentType +
+         " const& " + ParamName + ") const";
 }
-
-std::vector<const FieldDecl *>
-parentFields(const clang::CXXMethodDecl *MatchedDecl) {
-  std::vector<const FieldDecl *> fields;
-  for (const auto *f : MatchedDecl->getParent()->fields()) {
-    if (isAnnotatedWith(f, "deriving_eq::ignore"))
-      continue;
-    fields.push_back(f);
-  }
-  return fields;
-}
-
 } // namespace clang::tidy::nyub
