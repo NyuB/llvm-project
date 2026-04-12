@@ -1,7 +1,5 @@
 #include "DerivingShowCheck.h"
 #include "Helpers.h"
-#include <algorithm>
-#include <iostream>
 
 using clang::ast_matchers::functionDecl;
 using clang::ast_matchers::hasAttr;

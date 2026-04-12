@@ -192,12 +192,12 @@ bool DerivingEqCheck::isReturnTrue(const ReturnStmt *expr) {
   return returnedBool->getValue() == true;
 }
 
-static const ImplicitCastExpr *
-unNestImplicitCasts(const ImplicitCastExpr *expr) {
+static const Stmt *unNestImplicitCasts(const Stmt *expr) {
+  if (!expr)
+    return nullptr;
   while (const auto *const implicitCast =
-             getAs<Stmt::ImplicitCastExprClass, ImplicitCastExpr>(
-                 *expr->child_begin())) {
-    expr = implicitCast;
+             getAs<Stmt::ImplicitCastExprClass, ImplicitCastExpr>(expr)) {
+    expr = *implicitCast->child_begin();
   }
   return expr;
 }
@@ -207,13 +207,8 @@ static bool isFieldBinaryEquality(const FieldDecl *field,
   if (binary->getOpcode() != BinaryOperator::Opcode::BO_EQ)
     return false;
 
-  const auto *lhs =
-      getAs<Stmt::ImplicitCastExprClass, ImplicitCastExpr>(binary->getLHS());
-  if (!lhs)
-    return false;
-  lhs = unNestImplicitCasts(lhs);
-  const auto *const leftMember =
-      getAs<Stmt::MemberExprClass, MemberExpr>(*lhs->child_begin());
+  const auto *lhs = unNestImplicitCasts(binary->getLHS());
+  const auto *const leftMember = getAs<Stmt::MemberExprClass, MemberExpr>(lhs);
   if (!leftMember ||
       leftMember->child_begin()->getStmtClass() != Stmt::CXXThisExprClass ||
       leftMember->getMemberDecl()->getNameAsString() !=
@@ -222,13 +217,8 @@ static bool isFieldBinaryEquality(const FieldDecl *field,
     return false;
   }
 
-  const auto *rhs =
-      getAs<Stmt::ImplicitCastExprClass, ImplicitCastExpr>(binary->getRHS());
-  if (!rhs)
-    return false;
-  rhs = unNestImplicitCasts(rhs);
-  const auto *const rightMember =
-      getAs<Stmt::MemberExprClass, MemberExpr>(*rhs->child_begin());
+  const auto *rhs = unNestImplicitCasts(binary->getRHS());
+  const auto *const rightMember = getAs<Stmt::MemberExprClass, MemberExpr>(rhs);
   if (!rightMember ||
       rightMember->child_begin()->getStmtClass() != Stmt::DeclRefExprClass ||
       rightMember->getMemberDecl()->getNameAsString() !=
@@ -244,9 +234,9 @@ static bool isFieldOperatorEquality(const FieldDecl *field,
   if (operatorCall->getOperator() != OverloadedOperatorKind::OO_EqualEqual)
     return false;
 
-  auto children = operatorCall->children().begin();
-  auto lhs = ++children;
-  auto rhs = ++children;
+  auto childrenIterator = operatorCall->children().begin();
+  auto lhs = ++childrenIterator;
+  auto rhs = ++childrenIterator;
 
   const auto *leftMember = getAs<Stmt::MemberExprClass, MemberExpr>(*lhs);
   if (!leftMember)
