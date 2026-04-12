@@ -100,3 +100,13 @@ bool S::f_defined_later(const S& s) const {
 // CHECK-MESSAGES: :[[@LINE-3]]:43: warning: function 'f_defined_later' should consist of a single return statement composed of binary equality comparisons [nyub-deriving-eq]
 // CHECK-MESSAGES: :[[@LINE-3]]:12: warning: function 'f_defined_later' returned expression should be a boolean conjonction of equalities [nyub-deriving-eq]
 // CHECK-FIXES: bool S::f_defined_later(const S& s) const  { return (i == s.i) && (j == s.j); }
+
+
+struct NonRegression_ImplicitIntCastToInt {
+    char c;
+
+    [[clang::annotate("deriving_eq")]]
+    bool operator==(const NonRegression_ImplicitIntCastToInt &other) const { 
+        return c == other.c;
+    }
+};

@@ -9,8 +9,6 @@
 #include "DerivingEqCheck.h"
 #include "Helpers.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
-#include <algorithm>
-#include <iostream>
 
 using clang::ast_matchers::cxxMethodDecl;
 using clang::ast_matchers::hasAttr;
@@ -192,14 +190,25 @@ bool DerivingEqCheck::isReturnTrue(const ReturnStmt *expr) {
   return returnedBool->getValue() == true;
 }
 
+static const ImplicitCastExpr *
+unNestImplicitCasts(const ImplicitCastExpr *expr) {
+  while (const auto *const implicitCast =
+             getAs<Stmt::ImplicitCastExprClass, ImplicitCastExpr>(
+                 *expr->child_begin())) {
+    expr = implicitCast;
+  }
+  return expr;
+}
+
 bool isFieldEquality(const FieldDecl *field, const BinaryOperator *binary) {
   if (binary->getOpcode() != BinaryOperator::Opcode::BO_EQ)
     return false;
 
-  const auto *const lhs =
+  const auto *lhs =
       getAs<Stmt::ImplicitCastExprClass, ImplicitCastExpr>(binary->getLHS());
   if (!lhs)
     return false;
+  lhs = unNestImplicitCasts(lhs);
   const auto *const leftMember =
       getAs<Stmt::MemberExprClass, MemberExpr>(*lhs->child_begin());
   if (!leftMember ||
@@ -210,10 +219,11 @@ bool isFieldEquality(const FieldDecl *field, const BinaryOperator *binary) {
     return false;
   }
 
-  const auto *const rhs =
+  const auto *rhs =
       getAs<Stmt::ImplicitCastExprClass, ImplicitCastExpr>(binary->getRHS());
   if (!rhs)
     return false;
+  rhs = unNestImplicitCasts(rhs);
   const auto *const rightMember =
       getAs<Stmt::MemberExprClass, MemberExpr>(*rhs->child_begin());
   if (!rightMember ||
