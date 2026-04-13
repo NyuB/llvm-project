@@ -23,7 +23,7 @@ struct S {
     static std::ostream& f_ok_defined_later(std::ostream& os, S const& s);
 
     // Cannot annotate friend function declaration, only definition
-    friend std::ostream& f_friend_defined_later(std::ostream& os, S const& s);
+    friend std::ostream& operator<<(std::ostream& os, S const& s);
 
     // Signature-related checks
 
@@ -74,7 +74,6 @@ struct Empty {
     // CHECK-FIXES: static std::ostream& f_empty(std::ostream& os, Empty const& e) { return os << "{ }"; }
 };
 
-
 std::ostream & S::f_ok_defined_later(std::ostream & os, S const & s)
 {
     return os << "{ " << ".i = " << s.i << ", .j = " << s.j << " }";
@@ -88,7 +87,7 @@ void S::f_ko_defined_later(std::ostream& os, S const& s) { return; }
 // CHECK-FIXES: std::ostream& S::f_ko_defined_later(std::ostream& os, S const& s) { return os << "{ .i = " << s.i << ", .j = " << s.j << " }"; }
 
 [[clang::annotate("deriving_show")]]
-std::ostream & f_friend_defined_later(std::ostream & os, S const & s)
+std::ostream & operator<<(std::ostream & os, S const & s)
 {
     return os << "{ " << ".i = " << s.i << ", .j = " << s.j << " }";
 }
