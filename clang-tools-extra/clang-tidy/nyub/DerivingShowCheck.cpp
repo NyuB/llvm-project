@@ -31,13 +31,15 @@ void DerivingShowCheck::check(const MatchFinder::MatchResult &Result) {
   checkBody(MatchedDecl);
 }
 
-static SourceRange signatureRange(const clang::FunctionDecl *FunctionDecl) {
+// Capture the
+static SourceRange signatureToReplace(const clang::FunctionDecl *FunctionDecl) {
+  auto Begin = FunctionDecl->getTypeSpecStartLoc();
   if (FunctionDecl->isThisDeclarationADefinition()) {
-    auto Body = FunctionDecl->getBody()->getBeginLoc();
+    auto BodyBegin = FunctionDecl->getBody()->getBeginLoc();
     // Keep leading '{'
-    return SourceRange(FunctionDecl->getBeginLoc(), Body.getLocWithOffset(-1));
+    return {Begin, BodyBegin.getLocWithOffset(-1)};
   }
-  return FunctionDecl->getSourceRange();
+  return {Begin, FunctionDecl->getEndLoc()};
 }
 
 void DerivingShowCheck::checkSignature(const clang::FunctionDecl *MatchedDecl) {
@@ -45,7 +47,7 @@ void DerivingShowCheck::checkSignature(const clang::FunctionDecl *MatchedDecl) {
     diag(MatchedDecl->getLocation(),
          "function %0 signature is not suitable for string display")
         << MatchedDecl
-        << FixItHint::CreateReplacement(signatureRange(MatchedDecl),
+        << FixItHint::CreateReplacement(signatureToReplace(MatchedDecl),
                                         makeSignature(MatchedDecl));
   }
 }
@@ -120,7 +122,12 @@ DerivingShowCheck::makeSignature(const clang::FunctionDecl *MatchedDecl) {
   std::string ParamName = "_this";
   std::string ParamType = "T";
   const std::string StaticPrefix =
-      (isMethod(MatchedDecl) && !MatchedDecl->isThisDeclarationADefinition())
+      (isMethod(MatchedDecl) && !MatchedDecl->isThisDeclarationADefinition() &&
+       !MatchedDecl->isStatic() // We only replace the type specification of the
+                                // signature, which does not include the
+                                // "static" qualifier. So only add static if it
+                                // is not already there
+       )
           ? "static "
           : "";
 

@@ -101,3 +101,11 @@ struct Transformed {
     // CHECK-MESSAGES: [[@LINE-2]]:81: warning: function 'f_missing_body' body should consist of a single return statement [nyub-deriving-show]
     // CHECK-FIXES: static std::ostream& f_missing_body(std::ostream& os, Transformed const& t) { return os << "{ .i = " << t.i << ", .q = " << t.q.toStr() << ", .b = " << "[" << t.b << "]" << " }"; }
 };
+
+struct NonRegression_PreserveAnnotations {
+    [[clang::annotate("deriving_show")]] static std::ostream& f_decl();
+    // CHECK-MESSAGES: [[@LINE-1]]:63: warning: function 'f_decl' should take 2 parameters [nyub-deriving-show]
+    // CHECK-MESSAGES: [[@LINE-2]]:63: warning: function 'f_decl' signature is not suitable for string display [nyub-deriving-show]
+    // Double brackets are interpreted as test-specific annotations so we must escape them as regexes in the check-fixes instruction
+    // CHECK-FIXES: {{\[\[}}clang::annotate("deriving_show"){{\]\]}} static std::ostream& f_decl(std::ostream& os, NonRegression_PreserveAnnotations const& nonRegression_PreserveAnnotations);
+};

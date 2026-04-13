@@ -123,3 +123,17 @@ struct NonRegression_ImplicitIntCastToInt {
         return c == other.c;
     }
 };
+
+struct NonRegression_PreserveAnnotations {
+    [[clang::annotate("deriving_eq")]] bool f_decl(NonRegression_PreserveAnnotations const& other);
+    // CHECK-MESSAGES: :[[@LINE-1]]:45: warning: function 'f_decl' should be const [nyub-deriving-eq]
+    // CHECK-MESSAGES: :[[@LINE-2]]:45: warning: function 'f_decl' signature is not suitable for an equality operator [nyub-deriving-eq]  
+    // Double brackets are interpreted as test-specific annotations so we must escape them as regexes in the check-fixes instruction
+    // CHECK-FIXES: {{\[\[}}clang::annotate("deriving_eq"){{\]\]}} bool f_decl(NonRegression_PreserveAnnotations const& other) const;
+
+    [[clang::annotate("deriving_eq")]] auto f_decl_auto(NonRegression_PreserveAnnotations const& other) -> bool;
+    // CHECK-MESSAGES: :[[@LINE-1]]:45: warning: function 'f_decl_auto' should be const [nyub-deriving-eq]
+    // CHECK-MESSAGES: :[[@LINE-2]]:45: warning: function 'f_decl_auto' signature is not suitable for an equality operator [nyub-deriving-eq]  
+    // Double brackets are interpreted as test-specific annotations so we must escape them as regexes in the check-fixes instruction
+    // CHECK-FIXES: {{\[\[}}clang::annotate("deriving_eq"){{\]\]}} bool f_decl_auto(NonRegression_PreserveAnnotations const& other) const;
+};

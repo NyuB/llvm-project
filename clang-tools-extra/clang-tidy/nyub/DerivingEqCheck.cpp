@@ -11,6 +11,7 @@
 #include "clang/AST/ExprCXX.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Basic/OperatorKinds.h"
+#include "clang/Basic/SourceLocation.h"
 
 #include <utility>
 
@@ -33,21 +34,23 @@ void DerivingEqCheck::check(const MatchFinder::MatchResult &Result) {
   bodyCheck(MatchedDecl);
 }
 
+static SourceRange signatureToReplace(const clang::CXXMethodDecl *MatchedDecl) {
+  auto Begin = MatchedDecl->getTypeSpecStartLoc();
+  if (MatchedDecl->isThisDeclarationADefinition()) {
+    auto BodyBegin = MatchedDecl->getBody()->getBeginLoc();
+    // Keep leading '{'
+    return {Begin, BodyBegin.getLocWithOffset(-1)};
+  }
+  return {Begin, MatchedDecl->getEndLoc()};
+}
+
 void DerivingEqCheck::signatureCheck(const clang::CXXMethodDecl *MatchedDecl) {
   if (!isSignatureValid(MatchedDecl)) {
-    SourceRange SignatureToReplace;
-    if (MatchedDecl->isThisDeclarationADefinition()) {
-      auto Body = MatchedDecl->getBody()->getBeginLoc();
-      // Keep leading '{'
-      SignatureToReplace =
-          SourceRange(MatchedDecl->getBeginLoc(), Body.getLocWithOffset(-1));
-    } else {
-      SignatureToReplace = MatchedDecl->getSourceRange();
-    }
+    SourceRange SignatureToReplace = signatureToReplace(MatchedDecl);
     diag(MatchedDecl->getLocation(),
          "function %0 signature is not suitable for an equality operator")
         << MatchedDecl
-        << FixItHint::CreateReplacement(SourceRange(SignatureToReplace),
+        << FixItHint::CreateReplacement(SignatureToReplace,
                                         makeSignature(MatchedDecl));
   }
 }
