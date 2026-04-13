@@ -252,7 +252,10 @@ DerivingShowCheck::makeBody(const clang::FunctionDecl *MatchedDecl) {
       Body += " << ";
       Body += fieldRepresentation(SecondParam->getNameAsString(), Field);
     }
-    Body += " << " + quoted(" }");
+    if (First) // No field
+      Body += " << " + quoted("{ }");
+    else
+      Body += " << " + quoted(" }");
 
   } else {
     Body += " << " + SecondParam->getNameAsString();

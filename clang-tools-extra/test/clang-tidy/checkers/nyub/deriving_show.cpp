@@ -56,6 +56,24 @@ struct S {
     static std::ostream& f_missing_body(std::ostream& os, S const& s);
 };
 
+struct Single {
+    int i;
+
+    [[clang::annotate("deriving_show")]]
+    static std::ostream& f_single(std::ostream& os, Single const& s) { return os; }
+    // CHECK-MESSAGES: [[@LINE-1]]:70: warning: function 'f_single' body is not suitable for string display [nyub-deriving-show]
+    // CHECK-MESSAGES: [[@LINE-2]]:70: warning: function 'f_single' body should consist of a single return statement chaining << operators [nyub-deriving-show]
+    // CHECK-FIXES: static std::ostream& f_single(std::ostream& os, Single const& s) { return os << "{ .i = " << s.i << " }"; }
+};
+
+struct Empty {
+    [[clang::annotate("deriving_show")]]
+    static std::ostream& f_empty(std::ostream& os, Empty const& e) { return os; }
+    // CHECK-MESSAGES: [[@LINE-1]]:68: warning: function 'f_empty' body is not suitable for string display [nyub-deriving-show]
+    // CHECK-MESSAGES: [[@LINE-2]]:68: warning: function 'f_empty' body should consist of a single return statement chaining << operators [nyub-deriving-show]
+    // CHECK-FIXES: static std::ostream& f_empty(std::ostream& os, Empty const& e) { return os << "{ }"; }
+};
+
 
 std::ostream & S::f_ok_defined_later(std::ostream & os, S const & s)
 {
