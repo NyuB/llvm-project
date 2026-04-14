@@ -1,6 +1,5 @@
 #include "../ClangTidy.h"
 #include "../ClangTidyModule.h"
-#include "../ClangTidyModuleRegistry.h"
 #include "DerivingEqCheck.h"
 #include "DerivingShowCheck.h"
 
