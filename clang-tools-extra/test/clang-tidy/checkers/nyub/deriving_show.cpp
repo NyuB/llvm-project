@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s nyub-deriving-show %t
+// RUN: %check_clang_tidy %s nyub-deriving-show %t -- --extra-arg=-fno-delayed-template-parsing
 
 // To avoid having to include the entire ostream headers, just declare a no-op operator<< for ostream
 namespace std {
@@ -118,6 +118,20 @@ struct Transformed {
     // CHECK-MESSAGES: [[@LINE-2]]:81: warning: function 'f_missing_body' body should consist of a single return statement [nyub-deriving-show]
     // CHECK-FIXES: static std::ostream& f_missing_body(std::ostream& os, Transformed const& t) { return os << "{ .i = " << t.i << ", .q = " << t.q.toStr() << ", .b = " << "[" << t.b << "]" << " }"; }
 };
+
+template<typename T>
+struct Templated {
+    T t;
+
+    friend std::ostream& operator<<(std::ostream& os, Templated const& self);
+};
+
+template<typename T>
+[[clang::annotate("deriving_show")]]
+std::ostream& operator<<(std::ostream& os, Templated<T> const& self) { }
+// CHECK-MESSAGES: [[@LINE-1]]:70: warning: function 'operator<<' body is not suitable for string display [nyub-deriving-show]
+// CHECK-MESSAGES: [[@LINE-2]]:70: warning: function 'operator<<' body should consist of a single return statement [nyub-deriving-show]
+// CHECK-FIXES: std::ostream& operator<<(std::ostream& os, Templated<T> const& self) { return os << "{ .t = " << self.t << " }"; }
 
 struct NonRegression_PreserveAnnotations {
     [[clang::annotate("deriving_show")]] static std::ostream& f_decl();

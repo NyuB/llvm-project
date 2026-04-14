@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s nyub-deriving-eq %t
+// RUN: %check_clang_tidy %s nyub-deriving-eq %t -- --extra-arg=-fno-delayed-template-parsing
 
 struct S {
     int i;
@@ -113,6 +113,22 @@ struct OperatorCall {
     bool operator==(const OperatorCall &other) const { 
         return s == other.s;
     }
+};
+
+template<typename T>
+struct Templated {
+    T t;
+
+    [[clang::annotate("deriving_eq")]]
+    bool f_ok(Templated const& other) const {
+        return (t == other.t);
+    }
+
+    [[clang::annotate("deriving_eq")]]
+    bool f_void(Templated const& other) const {}
+    // CHECK-MESSAGES: :[[@LINE-1]]:47: warning: function 'f_void' has empty body but should return a boolean value
+    // CHECK-MESSAGES: :[[@LINE-2]]:47: warning: function 'f_void' should consist of a single return statement composed of binary equality comparisons [nyub-deriving-eq]
+    // CHECK-FIXES: bool f_void(Templated const& other) const { return (t == other.t); }
 };
 
 struct NonRegression_ImplicitIntCastToInt {

@@ -238,8 +238,7 @@ DerivingShowCheck::makeBody(const clang::FunctionDecl *MatchedDecl) {
   const auto *const PrintedType = dereferencedParamType(SecondParam->getType())
                                       ->getUnqualifiedDesugaredType();
   std::string Body;
-  if (PrintedType->isRecordType()) {
-    auto *const Record = PrintedType->getAsCXXRecordDecl();
+  if (auto *const Record = PrintedType->getAsCXXRecordDecl()) {
     bool First = true;
     for (auto *const Field : Record->fields()) {
       Body += " << ";
